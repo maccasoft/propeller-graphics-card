@@ -14,7 +14,7 @@ The board uses I/O ports **40H, 41H, 42H and 43H** for programming.
 
 ### Schematic
 
-![The board](schematic.jpg)
+![The schematic](schematic.png)
 
 
 | Parts List            |                     |          |                                 |
