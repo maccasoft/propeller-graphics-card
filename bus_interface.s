@@ -102,9 +102,6 @@ port43_handler      or      OUTA, bus_wait
 // ------------------------------------------------------------------------
 
 init
-                    movs    port41_handler, #_port41_table
-                    mov     hub_addr, hub_video_ram
-
                     mov     bus, #$00           // default video mode
                     jmp     #set_mode
 
@@ -211,6 +208,11 @@ _l6                 coginit a
                     add     a, CNT
                     waitcnt a, #0
 
+                    mov     hub_addr, hub_video_ram
+                    mov     hub_addr_top, hub_bitmap_ram
+                    mov     hub_addr_low, hub_video_ram
+                    movs    port41_handler, #_port41_table
+
                     andn    OUTA, bus_wait
 
                     jmp     #loop
@@ -225,21 +227,29 @@ set_sprites_ptr
 
 write_sprite_ram
                     mov     hub_addr, hub_sprite_ram
-                    movs    port41_handler, #_port41_table+1
+                    mov     hub_addr_top, hub_video_ram
+                    mov     hub_addr_low, hub_sprite_ram
+                    movs    port41_handler, #_port41_table+7
                     jmp     #loop
 
 write_video_ram
                     mov     hub_addr, hub_video_ram
+                    mov     hub_addr_top, hub_bitmap_ram
+                    mov     hub_addr_low, hub_video_ram
                     movs    port41_handler, #_port41_table+1
                     jmp     #loop
 
 write_bitmap_ram
                     mov     hub_addr, hub_bitmap_ram
+                    mov     hub_addr_top, hub_bitmap_ram_top
+                    mov     hub_addr_low, hub_bitmap_ram
                     movs    port41_handler, #_port41_table+1
                     jmp     #loop
 
 write_ram
                     mov     hub_addr, #0
+                    mov     hub_addr_top, hub_ram_top
+                    mov     hub_addr_low, #0
                     movs    port41_handler, #_port41_table+1
                     jmp     #loop
 
@@ -254,11 +264,14 @@ _port41_table       long    write_byte
                     long    set_tiles_addr_hi   // +4
                     long    set_sprites_addr    // +5
                     long    set_sprites_addr_hi // +6
+                    long    add_sprite_offset   // +7
 
 write_byte
                     shr     bus, #8
                     wrbyte  bus, hub_addr
                     add     hub_addr, #1
+                    cmp     hub_addr, hub_addr_top wc,wz
+        if_ae       mov     hub_addr, hub_addr_low
                     jmp     #loop
 
 add_hub_addr
@@ -301,6 +314,13 @@ set_sprites_addr_hi
                     and     bus, data_bus_mask
                     add     hub_sprites_data, bus
                     wrword  hub_sprites_data, hub_sprites_ptr
+                    movs    port41_handler, #_port41_table
+                    jmp     #loop
+
+add_sprite_offset
+                    and     bus, data_bus_mask
+                    shr     bus, #6
+                    add     hub_addr, bus
                     movs    port41_handler, #_port41_table
                     jmp     #loop
 
@@ -451,6 +471,8 @@ cog_driver_addr     long    $76B0
 hub_sprite_ram      long    $0000
 hub_video_ram       long    $0000 + (MAX_SPRITES * 4)
 hub_bitmap_ram      long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
+hub_bitmap_ram_top  long    $0000 + (MAX_SPRITES * 4) + (40 * 30) + (480 * 64)
+hub_ram_top         long    $8000
 
 hub_tiles_data      long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
 hub_sprites_data    long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
@@ -459,8 +481,6 @@ hub_tiles_ptr       long    $7EB0
 hub_sprites_ptr     long    $7EB2
 hub_fi              long    $7EBC
 hub_sbuf            long    $7EC0
-
-hub_addr            long    0
 
 video_drivers
                     // mode 1
@@ -485,6 +505,10 @@ ccnt                .res    1
 
 i2c_addr            .res    1
 i2c_hub_addr        .res    1
+
+hub_addr            .res    1
+hub_addr_top        .res    1
+hub_addr_low        .res    1
 
                     fit     $1F0
 
