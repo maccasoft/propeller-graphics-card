@@ -44,22 +44,14 @@ _rd1                    rdlong  0-0, sbuf_ptr
                         rdword  hub_tiles_data, hub_tiles_ptr
                         rdword  hub_sprites_data, hub_sprites_ptr
 
+                        mov     roffs, #0
+                        mov     loffs, offset
+                        shl     loffs, #3                   // 8 bytes per scanline
                         mov     scnt, offset
 
 loop
-                        mov     loffs, scnt
-
-                        mov     a, loffs
-                        shr     a, #3
-                        shl     a, #3
-                        mov     video_ptr, a                // multiply by 40 (320 / 8 pixels x 1 byte)
-                        shl     video_ptr, #2
-                        add     video_ptr, a
-                        add     video_ptr, hub_video_ram
-
-                        and     loffs, #7
-                        shl     loffs, #3                   // 8-bytes per scanline
-                        add     loffs, hub_tiles_data
+                        mov     video_ptr, hub_video_ram
+                        add     video_ptr, roffs
 
                         movd    str0, #sbuf
                         movd    str1, #sbuf+1
@@ -69,6 +61,7 @@ _l1                     rdbyte  tile_ptr, video_ptr         // read tile number 
 
                         shl     tile_ptr, #6                // 64 bytes per tile
                         add     tile_ptr, loffs
+                        add     tile_ptr, hub_tiles_data
 
                         rdlong  colors1, tile_ptr           // pixels, 8 bit per pixel, from msb
                         and     colors1, color_mask
@@ -303,6 +296,10 @@ _wr1                    wrlong  0-0, sbuf_ptr
                         sub     _wr1, inc_dest_2
             if_nc       djnz    sbuf_ptr, #_wr0
 
+                        add     loffs, #COGS<<3             // next line offset
+                        cmpsub  loffs, #8<<3 wc
+            if_c        add     roffs, #40
+
                         add     scnt, #COGS                 // next line to render
                         cmp     scnt, #V_RES wc,wz
             if_b        jmp     #loop
@@ -360,6 +357,7 @@ tile                    res     1
 
 offset                  res     1
 loffs                   res     1
+roffs                   res     1
 
 ecnt                    res     1
 scnt                    res     1
