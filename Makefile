@@ -42,6 +42,7 @@ all: $(NAME).elf
 
 $(NAME).elf: $(OBJS) Makefile
 	$(CXX) -m$(MODEL) $(LDFLAGS) -Wl,-Map=$@.map -o $@ $(OBJS) $(LIBS)
+	$(LOADER) -s $@
 
 
 #
