@@ -87,11 +87,11 @@ port42_handler      jmp     #upload
 port43_handler      or      OUTA, bus_wait
 
                     rdlong  a, hub_fi
-                    cmp     a, #239 wz
+                    cmp     a, vsync_line wz
         if_z        jmp     #$-2                // wait for line counter reset (vsync)
 
                     rdlong  a, hub_fi
-                    cmp     a, #239 wz
+                    cmp     a, vsync_line wz
         if_nz       jmp     #$-2                // wait for line counter reset (vsync)
 
                     andn    OUTA, bus_wait
@@ -118,8 +118,8 @@ loop
 // ------------------------------------------------------------------------
 
 _port40_table       long    set_mode            // 00
-                    long    loop                // 01
-                    long    loop                // 02
+                    long    set_mode            // 01
+                    long    set_mode            // 02
                     long    loop                // 03
                     long    loop                // 04
                     long    loop                // 05
@@ -160,6 +160,13 @@ _l7                 wrlong  a, ptr
                     mov     hub_sprites_data, hub_bitmap_ram
                     wrword  hub_tiles_data, hub_tiles_ptr
                     wrword  hub_sprites_data, hub_sprites_ptr
+
+                    cmp     bus, #0 wz
+        if_z        mov     vsync_line, #239
+                    cmp     bus, #1 wz
+        if_z        mov     vsync_line, #191
+                    cmp     bus, #2 wz
+        if_z        mov     vsync_line, #223
 
                     mov     a, bus              // multiply a by 5 (4 video drivers + renderer)
                     shl     a, #2
@@ -452,19 +459,19 @@ eeprom_read
                     call    #i2c_write
 
                     // Read data
-_l4                 cmp     ccnt, #1 wz
-            if_z    jmp     #_l5
+_l4r                cmp     ccnt, #1 wz
+            if_z    jmp     #_l5r
                     add     i2c_addr, #1
                     test    i2c_addr, block_boundary wz
-            if_z    jmp     #_l5
+            if_z    jmp     #_l5r
                     mov     ack, #I2C_ACK
                     call    #i2c_read
                     wrbyte  data, i2c_hub_addr
                     add     i2c_hub_addr, #1
                     sub     ccnt, #1
-                    jmp     #_l4
+                    jmp     #_l4r
 
-_l5                 mov     ack, #I2C_NAK
+_l5r                mov     ack, #I2C_NAK
                     call    #i2c_read
                     wrbyte  data, i2c_hub_addr
                     add     i2c_hub_addr, #1
@@ -619,6 +626,8 @@ hub_sprites_ptr     long    $7EB2
 hub_fi              long    $7EBC
 hub_sbuf            long    $7EC0
 
+vsync_line          long    239
+
 ms5_delay           long    80_000 * 5
 
 video_drivers
@@ -628,6 +637,20 @@ video_drivers
                     long    @__load_start_cog_vga_320x240_video_driver
                     long    @__load_start_cog_vga_320x240_video_driver
                     long    @__load_start_cog_scanline_renderer_320x240
+
+                    // mode 2
+                    long    @__load_start_cog_ntsc_256x192_video_driver
+                    long    @__load_start_cog_pal_256x192_video_driver
+                    long    @__load_start_cog_vga_256x192_video_driver
+                    long    @__load_start_cog_vga_256x192_video_driver
+                    long    @__load_start_cog_scanline_renderer_256x192
+
+                    // mode 3
+                    long    @__load_start_cog_ntsc_256x224_video_driver
+                    long    @__load_start_cog_pal_256x224_video_driver
+                    long    @__load_start_cog_vga_256x224_video_driver
+                    long    @__load_start_cog_vga_256x224_video_driver
+                    long    @__load_start_cog_scanline_renderer_256x224
 
 // uninitialised data and/or temporaries
 

@@ -30,7 +30,15 @@ OBJS = \
 	ntsc_scanline_driver_320x224.o \
 	pal_scanline_driver_320x240.o \
 	vga_scanline_driver_320x240.o \
-	scanline_renderer_320x240.o
+	scanline_renderer_320x240.o \
+	ntsc_scanline_driver_256x192.o \
+	pal_scanline_driver_256x192.o \
+	vga_scanline_driver_256x192.o \
+	scanline_renderer_256x192.o \
+	ntsc_scanline_driver_256x224.o \
+	pal_scanline_driver_256x224.o \
+	vga_scanline_driver_256x224.o \
+	scanline_renderer_256x224.o
 
 LIBS := 
 
