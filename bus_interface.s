@@ -538,7 +538,8 @@ i2c_stop
                     nop
                     nop
 
-                    or      OUTA, i2c_scl
+                    andn    DIRA, i2c_scl
+                    nop
                     andn    DIRA, i2c_sda
 i2c_stop_ret        ret
 
