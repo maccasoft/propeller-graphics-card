@@ -67,7 +67,9 @@ $(NAME).elf: $(OBJS) Makefile
 	@mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 
 %.o: %.s
-	$(CC) $(ASFLAGS) -o $@ -c $<
+	@mkdir -p $(DEPDIR)/$(@D)
+	$(CC) $(ASFLAGS) -MD -MP -MF $(DEPDIR)/$*.Tpo -o $@ -c $<
+	@mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
 
 
 #
