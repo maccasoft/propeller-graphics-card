@@ -27,14 +27,17 @@ SPINFLAGS = -q -u
 OBJS = \
 	main.o \
 	bus_interface.o \
+	video_mode_320x240.o \
 	ntsc_scanline_driver_320x224.o \
 	pal_scanline_driver_320x240.o \
 	vga_scanline_driver_320x240.o \
 	scanline_renderer_320x240.o \
+	video_mode_256x192.o \
 	ntsc_scanline_driver_256x192.o \
 	pal_scanline_driver_256x192.o \
 	vga_scanline_driver_256x192.o \
 	scanline_renderer_256x192.o \
+	video_mode_256x224.o \
 	ntsc_scanline_driver_256x224.o \
 	pal_scanline_driver_256x224.o \
 	vga_scanline_driver_256x224.o \
