@@ -41,6 +41,8 @@ _rd1                    rdlong  0-0, sbuf_ptr
                         shl     loffs, #3                   // 8 bytes per scanline
                         mov     scnt, offset
 
+// tiles
+
 loop
                         mov     video_ptr, hub_video_ram
                         add     video_ptr, roffs
@@ -69,6 +71,8 @@ str1                    mov     0-0, colors2
 
                         add     video_ptr, #1
                         djnz    ecnt, #_l1
+
+// sprites
 
                         movs    _tile, #sprites_table       // Initialize sprite rendering
                         mov     pcnt, #MAX_SPRITES
@@ -120,9 +124,7 @@ _tile                   mov     tile, 0-0 wz
      if_nz_and_nc       add     tile_ptr, h
             if_nc       cmp     ecnt, #32 wc
      if_nz_and_nc       add     tile_ptr, h
-
-            if_z        sub     h, #4
-            if_nz       add     h, #4
+                        sumz    h, #4
 
                         test    tile, x_sign_mask wc        // check 9th bit
                         mov     x, tile
@@ -131,16 +133,16 @@ _tile                   mov     tile, 0-0 wz
                         cmps    x, neg_clip wz,wc
             if_c        and     x, #$1FF                    // max -32
 
-                        movs    _src0, #sbuf                // sets source and destination buffer pointers
-                        movs    _src1, #sbuf+1
+                        movd    _src0, #sbuf                // sets source and destination buffer pointers
+                        movd    _src1, #sbuf+1
                         movd    _dst0, #sbuf
                         movd    _dst1, #sbuf+1
 
                         mov     a, x                        // adjust scanline buffer pointer to x location
                         sar     a, #2
+                        shl     a, #9
                         add     _src0, a
                         add     _src1, a
-                        shl     a, #9
                         add     _dst0, a
                         add     _dst1, a
 
@@ -160,83 +162,69 @@ _l2                     rdlong  data1, tile_ptr
                         xor     data2, transparency_mask
 
 _l2b                    test    tile, mirror_mask wc
+                        sumc    tile_ptr, h
 
-_src0                   mov     colors1, 0-0
-_src1                   mov     colors2, 0-0
+            if_c        ror     data1, #24
+            if_c        mov     a, data1
+            if_c        and     a, swap_mask
+            if_c        ror     data1, #16
+            if_c        andn    data1, swap_mask
+            if_c        or      a, data1
 
-            if_nc       add     tile_ptr, h
-            if_c        sub     tile_ptr, h
+            if_c        ror     data2, #24
+            if_c        mov     data1, data2
+            if_c        and     data1, swap_mask
+            if_c        ror     data2, #16
+            if_c        andn    data2, swap_mask
+            if_c        or      data1, data2
 
-            if_nc       mov     pixels1, data1
-            if_nc       shl     pixels1, x
-            if_c        mov     pixels1, data2
-            if_c        shr     pixels1, x
+            if_c        mov     data2, a
+
+                        mov     pixels1, data1
+                        shl     pixels1, x
                         or      pixels1, pixels2
                         cmp     x, #0 wz
-     if_nz_and_nc       mov     pixels2, data1
-            if_nc       shr     pixels2, b
-     if_nz_and_c        mov     pixels2, data2
-            if_c        shl     pixels2, b
+            if_nz       mov     pixels2, data1
+                        shr     pixels2, b
 
-            if_c        ror     colors1, #24
-                        mov     a, pixels1
-                        and     a, mask_0 wz
-            if_nz       andn    colors1, mask_0
-            if_nz       or      colors1, a
-                        mov     a, pixels1
-                        and     a, mask_2 wz
-            if_nz       andn    colors1, mask_2
-            if_nz       or      colors1, a
-            if_c        ror     colors1, #16
-                        mov     a, pixels1
-                        and     a, mask_1 wz
-            if_nz       andn    colors1, mask_1
-            if_nz       or      colors1, a
-                        and     pixels1, mask_3 wz
-            if_nz       andn    colors1, mask_3
-            if_nz       or      colors1, pixels1
-            if_c        rol     colors1, #8
+                        mov     colors1, #0
+                        test    pixels1, t_mask_0 wz
+        if_z            or      colors1, mask_0
+                        test    pixels1, t_mask_1 wz
+        if_z            or      colors1, mask_1
+                        test    pixels1, t_mask_2 wz
+        if_z            or      colors1, mask_2
+                        test    pixels1, t_mask_3 wz
+        if_z            or      colors1, mask_3
+_src0                   and     0-0, colors1
+                        andn    pixels1, colors1
+_dst0                   or      0-0, pixels1
 
-            if_nc       mov     pixels1, data2
-            if_nc       shl     pixels1, x
-            if_c        mov     pixels1, data1
-            if_c        shr     pixels1, x
+                        mov     pixels1, data2
+                        shl     pixels1, x
                         or      pixels1, pixels2
                         cmp     x, #0 wz
-     if_nz_and_nc       mov     pixels2, data2
-            if_nc       shr     pixels2, b
-     if_nz_and_c        mov     pixels2, data1
-            if_c        shl     pixels2, b
+            if_nz       mov     pixels2, data2
+                        shr     pixels2, b
 
-            if_c        ror     colors2, #24
-                        mov     a, pixels1
-                        and     a, mask_0 wz
-            if_nz       andn    colors2, mask_0
-            if_nz       or      colors2, a
-                        mov     a, pixels1
-                        and     a, mask_2 wz
-            if_nz       andn    colors2, mask_2
-            if_nz       or      colors2, a
-            if_c        ror     colors2, #16
-                        mov     a, pixels1
-                        and     a, mask_1 wz
-            if_nz       andn    colors2, mask_1
-            if_nz       or      colors2, a
-                        and     pixels1, mask_3 wz
-            if_nz       andn    colors2, mask_3
-            if_nz       or      colors2, pixels1
-            if_c        rol     colors2, #8
-
-                        and     colors1, color_mask
-                        and     colors2, color_mask
-_dst0                   mov     0-0, colors1
-_dst1                   mov     0-0, colors2
+                        mov     colors1, #0
+                        test    pixels1, t_mask_0 wz
+        if_z            or      colors1, mask_0
+                        test    pixels1, t_mask_1 wz
+        if_z            or      colors1, mask_1
+                        test    pixels1, t_mask_2 wz
+        if_z            or      colors1, mask_2
+                        test    pixels1, t_mask_3 wz
+        if_z            or      colors1, mask_3
+_src1                   and     0-0, colors1
+                        andn    pixels1, colors1
+_dst1                   or      0-0, pixels1
 
                         sub     ecnt, ccnt  wc,wz
         if_z_or_c       jmp     #_next
 
-                        add     _src0, #2
-                        add     _src1, #2
+                        add     _src0, inc_dest_2
+                        add     _src1, inc_dest_2
                         add     _dst0, inc_dest_2
                         add     _dst1, inc_dest_2
 
@@ -327,6 +315,13 @@ mask_0                  long    $00_00_00_FF
 mask_1                  long    $00_00_FF_00
 mask_2                  long    $00_FF_00_00
 mask_3                  long    $FF_00_00_00
+
+swap_mask               long    $00_FF_00_FF
+
+t_mask_0                long    %00000000_00000000_00000000_00000001
+t_mask_1                long    %00000000_00000000_00000001_00000000
+t_mask_2                long    %00000000_00000001_00000000_00000000
+t_mask_3                long    %00000001_00000000_00000000_00000000
 
 color_mask              long    %11111100_11111100_11111100_11111100
 transparency_mask       long    %00000001_00000001_00000001_00000001
