@@ -2,6 +2,12 @@
 #include "defines.inc"
 
 start
+                        test    vram_expand_h_flag, PAR wz
+        if_nz           shl     hub_vram_size, #1
+                        test    vram_expand_v_flag, PAR wz
+        if_nz           shl     hub_vram_size, #1
+                        add     hub_bitmap_ram, hub_vram_size
+
                         wrword  hub_bitmap_ram, hub_tiles_ptr
                         wrword  hub_bitmap_ram, hub_sprites_ptr
 
@@ -64,11 +70,16 @@ inc_par_offset          long    %00000000000001_00000000000000_0_000
 
 hub_sprite_ram          long    $0000
 hub_video_ram           long    $0000 + (MAX_SPRITES * 4)
-hub_bitmap_ram          long    $0000 + (MAX_SPRITES * 4) + (VRAM_TILES_H * VRAM_TILES_V)
+hub_bitmap_ram          long    $0000 + (MAX_SPRITES * 4)
+
+hub_vram_size           long    (VRAM_TILES_H * VRAM_TILES_V)
 
 hub_tiles_ptr           long    $7EB0
 hub_sprites_ptr         long    $7EB2
 hub_fi                  long    $7EBC
+
+vram_expand_h_flag      long    VRAM_EXPAND_H << 2
+vram_expand_v_flag      long    VRAM_EXPAND_V << 2
 
 // uninitialised data and/or temporaries
 

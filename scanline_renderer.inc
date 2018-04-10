@@ -6,10 +6,13 @@
  * 6-bits per pixels (direct palette)
  * 8x8 pixels tiles
  * 8x8 up to 32x32 pixels sprites
+ * Full-screen scrolling
  *
  * Copyright (c) 2015-2018 Marco Maccaferri
  * MIT Licensed.
  */
+
+#include "defines.inc"
 
                         .org    0
 
@@ -17,11 +20,19 @@
                         shr     offset, #2                  // Note: PAR is 14 bits only! bits 0-1 are 00
                         and     offset, #$7
 
+                        test    vram_expand_h_flag, PAR wz
+        if_nz           add     _htiles1, #VRAM_TILES_H
+        if_nz           add     _htiles2, #VRAM_TILES_H
+        if_nz           add     _htiles3, #VRAM_TILES_H
+        if_nz           add     _hmul1, #1
+                        test    vram_expand_v_flag, PAR wz
+        if_nz           add     _vsub1, #V_RES
+
 vsync
                         rdlong  a, hub_fi wz
-            if_nz       jmp     #$-1                        // wait for line counter reset (vsync)
+        if_nz           jmp     #$-1                        // wait for line counter reset (vsync)
 
-                        mov     sbuf_ptr, hub_sprite_ram
+                        mov     sbuf_ptr, #0
                         movd    _rd0, #sprites_table + MAX_SPRITES - 1
                         movd    _rd1, #sprites_table + MAX_SPRITES - 2
                         add     sbuf_ptr, #MAX_SPRITES * 4 -1
@@ -31,27 +42,57 @@ _rd0                    rdlong  0-0, sbuf_ptr
                         sub     sbuf_ptr, i2s7 wc
 _rd1                    rdlong  0-0, sbuf_ptr
                         sub     _rd1, inc_dest_2
-            if_nc       djnz    sbuf_ptr, #_rd0
+        if_nc           djnz    sbuf_ptr, #_rd0
 
-                        rdword  hub_tiles_data, hub_tiles_ptr
-                        rdword  hub_sprites_data, hub_sprites_ptr
+                        mov     sbuf_ptr, hub_attributes_ptr
+                        rdword  hub_tiles_data, sbuf_ptr
+                        add     sbuf_ptr, #2
+                        rdword  hub_sprites_data, sbuf_ptr
+                        add     sbuf_ptr, #2
+                        rdword  xs, sbuf_ptr
+                        add     sbuf_ptr, #2
+                        rdword  ys, sbuf_ptr
 
-                        mov     roffs, #0
-                        mov     loffs, offset
-                        shl     loffs, #3                   // 8 bytes per scanline
                         mov     scnt, offset
 
 // tiles
 
 loop
-                        mov     video_ptr, hub_video_ram
-                        add     video_ptr, roffs
+                        mov     loffs, scnt
+                        add     loffs, ys
+_vsub1                  cmpsub  loffs, #V_RES
 
+#if VRAM_TILES_H == 40
+                        mov     a, loffs
+                        andn    a, #$07
+                        mov     video_ptr, a
+_hmul1                  shl     video_ptr, #2
+                        add     video_ptr, a
+#elif VRAM_TILES_H == 32
+                        mov     video_ptr, loffs
+                        shr     video_ptr, #3
+_hmul1                  shl     video_ptr, #5
+#endif
+
+                        and     loffs, #7
+                        shl     loffs, #3                   // 8-bytes per scanline
                         add     loffs, hub_tiles_data
 
-                        movd    str0, #sbuf
-                        movd    str1, #sbuf+1
-                        mov     ecnt, #VRAM_TILES_H
+                        test    xs, #%100 wz
+        if_z            movd    str0, #sbuf
+        if_nz           movd    str0, #sbuf-1
+        if_z            movd    str1, #sbuf+1
+        if_nz           movd    str1, #sbuf
+
+                        mov     a, xs
+                        shr     a, #3
+                        add     video_ptr, a
+                        add     video_ptr, hub_video_ram
+
+_htiles1                mov     ccnt, #VRAM_TILES_H
+                        sub     ccnt, a
+
+                        mov     ecnt, #VRAM_TILES_H+1
 
 _l1                     rdbyte  tile_ptr, video_ptr         // read tile number to display
 
@@ -70,7 +111,39 @@ str1                    mov     0-0, colors2
                         add     str1, inc_dest_2
 
                         add     video_ptr, #1
+                        sub     ccnt, #1 wz
+_htiles2    if_z        sub     video_ptr, #VRAM_TILES_H
+_htiles3    if_z        mov     ccnt, #VRAM_TILES_H
                         djnz    ecnt, #_l1
+
+// fine scroll
+
+                        movs    _src1h,#sbuf
+                        movs    _src2h,#sbuf+1
+                        movd    _dst1h,#sbuf
+
+                        mov     b, xs
+                        and     b, #3 wz
+                        shl     b, #3
+                        mov     x, #32
+                        sub     x, b
+
+                        mov     ecnt, #H_RES/4
+
+_src1h                  mov     colors1, 0-0
+_src2h                  mov     colors2, 0-0
+
+            if_nz       shr     colors1, b
+            if_nz       shl     colors2, x
+            if_nz       or      colors1, colors2
+
+_dst1h                  mov     0-0, colors1
+
+                        add     _src1h, #1
+                        add     _src2h, #1
+                        add     _dst1h, inc_dest
+
+                        djnz    ecnt, #_src1h
 
 // sprites
 
@@ -239,13 +312,15 @@ _dst1                   or      0-0, pixels1
 _next                   add     _tile, #1
                         djnz    pcnt, #_tile
 
+
+// scanline buffer output
+
 emit
                         rdlong  a, hub_fi
                         cmp     a, scnt wz,wc
             if_ne       jmp     #$-2                        // wait for line fetch start
 
                         mov     sbuf_ptr, hub_sbuf
-#if H_RES == 320
                         wrlong  sbuf, sbuf_ptr
                         add     sbuf_ptr, #4
                         wrlong  sbuf + 1, sbuf_ptr
@@ -271,23 +346,12 @@ emit
                         movd    _wr1, #sbuf +(H_RES/4) -2
                         add     sbuf_ptr, #(H_RES-40) -1
                         movi    sbuf_ptr, #((H_RES/4)-10) -2
-#else
-                        movd    _wr0, #sbuf +(H_RES/4) -1
-                        movd    _wr1, #sbuf +(H_RES/4) -2
-                        add     sbuf_ptr, #H_RES -1
-                        movi    sbuf_ptr, #(H_RES/4) -2
-#endif
 _wr0                    wrlong  0-0, sbuf_ptr
                         sub     _wr0, inc_dest_2
                         sub     sbuf_ptr, i2s7 wc
 _wr1                    wrlong  0-0, sbuf_ptr
                         sub     _wr1, inc_dest_2
             if_nc       djnz    sbuf_ptr, #_wr0
-
-                        sub     loffs, hub_tiles_data
-                        add     loffs, #COGS<<3             // next line offset
-                        cmpsub  loffs, #8<<3 wc
-            if_c        add     roffs, #VRAM_TILES_H
 
                         add     scnt, #COGS                 // next line to render
                         cmp     scnt, #V_RES wc,wz
@@ -297,12 +361,12 @@ _wr1                    wrlong  0-0, sbuf_ptr
 
 // driver parameters
 
-hub_sprite_ram          long    $0000
 hub_video_ram           long    $0000 + (MAX_SPRITES * 4)
-hub_tiles_data          long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
-hub_sprites_data        long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
-hub_tiles_ptr           long    $7EB0
-hub_sprites_ptr         long    $7EB2
+hub_tiles_data          long    $0000 + (MAX_SPRITES * 4)
+hub_sprites_data        long    $0000 + (MAX_SPRITES * 4)
+
+hub_attributes_ptr      long    $7EB0
+
 hub_fi                  long    $7EBC
 hub_sbuf                long    $7EC0 + SBUF_OFS
 
@@ -339,6 +403,9 @@ pixels2                 long    0
 colors1                 long    0
 colors2                 long    0
 
+vram_expand_h_flag      long    VRAM_EXPAND_H << 5
+vram_expand_v_flag      long    VRAM_EXPAND_V << 5
+
 // uninitialised data and/or temporaries
 
 a                       res     1
@@ -352,7 +419,6 @@ tile                    res     1
 
 offset                  res     1
 loffs                   res     1
-roffs                   res     1
 xs                      res     1
 ys                      res     1
 
