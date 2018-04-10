@@ -1,5 +1,9 @@
 .deps
+.settings
+.cproject
+.project
 *.o
 *.elf
 *.map
+*.bin
 *.binary
