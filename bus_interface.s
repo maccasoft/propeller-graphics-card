@@ -74,8 +74,8 @@ port43_handler      or      OUTA, bus_wait
 // ------------------------------------------------------------------------
 
 init
-                    mov     bus, #$00           // default video mode
-                    jmp     #set_mode_param
+                    mov     data, #$00        	// default video mode
+                    jmp     #set_mode_param_end
 
 loop
                     waitpeq bus_trigger, bus_mask
@@ -107,6 +107,9 @@ _port40_table       long    set_mode            // 00
                     long    write_ram           // 0F
 
 set_mode
+                    mov     data, #0
+                    mov     data1, #0
+                    mov     data2, #0
                     movs    port41_handler, #_port41_table+12
                     jmp     #loop
 
@@ -171,6 +174,8 @@ _port41_table       long    write_byte
                     long    set_scroll          // +10
                     long    set_ys              // +11
                     long    set_mode_param      // +12
+                    long    set_mode_param1     // +13
+                    long    set_mode_param2     // +14
 
 write_byte
                     shr     bus, #8
@@ -252,6 +257,22 @@ set_ys
                     jmp     #loop
 
 set_mode_param
+                    shr     bus, #8
+                    mov     data, bus
+                    add     port41_handler, #1
+                    jmp     #loop
+
+set_mode_param1
+                    shr     bus, #8
+                    mov     data1, bus
+                    add     port41_handler, #1
+                    jmp     #loop
+
+set_mode_param2
+                    shr     bus, #8
+                    mov     data2, bus
+
+set_mode_param_end
                     or      OUTA, bus_wait
 
                     // stops all cogs except the current
@@ -272,9 +293,7 @@ _l7                 wrlong  a, ptr
                     add     ptr, #4
                     djnz    ecnt, #_l7
 
-                    shr     bus, #8
-
-                    mov     a, bus
+                    mov     a, data
                     and     a, #$07
                     add     a, #video_mode_loaders
                     movs    _drv0, a
@@ -288,10 +307,17 @@ _drv0               mov     i2c_addr, 0-0
                     add     ptr, #2
                     rdword  vsync_line, ptr
 
+                    mov     ptr, cog_param_addr
+                    wrbyte  data, ptr
+                    add     ptr, #1
+                    wrbyte  data1, ptr
+                    add     ptr, #1
+                    wrbyte  data2, ptr
+
                     neg     b, #1
                     wrlong  b, hub_fi
 
-                    mov     a, bus
+                    mov     a, data
                     and     a, #$FF
                     shl     a, #16
                     or      a, cog_driver_addr
@@ -476,16 +502,17 @@ i2c_sda             long    1 << i2c_sda_pin
 block_boundary      long    $0000_FFFF
 
 cog_driver_size     long    2048
-cog_driver_addr     long    $76B0
+cog_driver_addr     long    $7600
+cog_param_addr      long    $7E00
 
 hub_sprite_ram      long    $0000
 hub_video_ram       long    $0000 + (MAX_SPRITES * 4)
-hub_bitmap_ram      long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
-hub_bitmap_ram_top  long    $0000 + (MAX_SPRITES * 4) + (40 * 30) + (480 * 64)
+hub_bitmap_ram      long    $0000 + (MAX_SPRITES * 4)
+hub_bitmap_ram_top  long    $0000 + (MAX_SPRITES * 4)
 hub_ram_top         long    $8000
 
-hub_tiles_data      long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
-hub_sprites_data    long    $0000 + (MAX_SPRITES * 4) + (40 * 30)
+hub_tiles_data      long    $0000 + (MAX_SPRITES * 4)
+hub_sprites_data    long    $0000 + (MAX_SPRITES * 4)
 
 hub_attributes_ptr
 hub_tiles_ptr       long    $7EB0
@@ -511,6 +538,8 @@ b                   .res    1
 c                   .res    1
 ptr                 .res    1
 data                .res    1
+data1               .res    1
+data2               .res    1
 ack                 .res    1
 mask                .res    1
 bus                 .res    1

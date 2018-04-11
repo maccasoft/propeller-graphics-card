@@ -16,17 +16,7 @@
 
                         .org    0
 
-                        mov     offset, PAR                 // Read row offset from PAR
-                        shr     offset, #2                  // Note: PAR is 14 bits only! bits 0-1 are 00
-                        and     offset, #$7
-
-                        test    vram_expand_h_flag, PAR wz
-        if_nz           add     _htiles1, #VRAM_TILES_H
-        if_nz           add     _htiles2, #VRAM_TILES_H
-        if_nz           add     _htiles3, #VRAM_TILES_H
-        if_nz           add     _hmul1, #1
-                        test    vram_expand_v_flag, PAR wz
-        if_nz           add     _vsub1, #V_RES
+                        jmp     #setup
 
 vsync
                         rdlong  a, hub_fi wz
@@ -64,9 +54,10 @@ _vsub1                  cmpsub  loffs, #V_RES
 
 #if VRAM_TILES_H == 40
                         mov     a, loffs
-                        andn    a, #$07
+                        shr     a, #3
+_hmul1                  shl     a, #3
                         mov     video_ptr, a
-_hmul1                  shl     video_ptr, #2
+                        shl     video_ptr, #2
                         add     video_ptr, a
 #elif VRAM_TILES_H == 32
                         mov     video_ptr, loffs
@@ -312,6 +303,85 @@ _dst1                   or      0-0, pixels1
 _next                   add     _tile, #1
                         djnz    pcnt, #_tile
 
+// overlay
+
+                        mov     loffs, scnt
+                        cmpsub  loffs, overlay1_start wz,wc
+            if_c        cmp     loffs, overlay1_lines wz,wc
+            if_c        jmp     #overlay
+
+                        mov     loffs, scnt
+                        cmpsub  loffs, overlay2_start wz,wc
+            if_c        cmp     loffs, overlay2_lines wz,wc
+            if_c        add     loffs, overlay1_lines
+            if_nc       jmp     #emit
+
+overlay
+#if VRAM_TILES_H == 40
+                        mov     a, loffs
+                        andn    a, #$07
+                        mov     video_ptr, a
+                        shl     video_ptr, #2
+                        add     video_ptr, a
+#elif VRAM_TILES_H == 32
+                        mov     video_ptr, loffs
+                        shr     video_ptr, #3
+                        shl     video_ptr, #5
+#endif
+                        add     video_ptr, hub_video_overlay_ram
+
+                        and     loffs, #7
+                        shl     loffs, #3
+                        add     loffs, hub_tiles_data
+
+                        movd    _sr0, #sbuf
+                        movd    _sr1, #sbuf+1
+                        movd    _st0, #sbuf
+                        movd    _st1, #sbuf+1
+                        mov     ecnt, #VRAM_TILES_H
+
+_l4                     rdbyte  tile_ptr, video_ptr
+
+                        shl     tile_ptr, #6
+                        add     tile_ptr, loffs
+
+                        rdlong  pixels1, tile_ptr
+                        mov     colors1, #0
+                        test    pixels1, t_mask_0 wz
+        if_nz           or      colors1, mask_0
+                        test    pixels1, t_mask_1 wz
+        if_nz           or      colors1, mask_1
+                        test    pixels1, t_mask_2 wz
+        if_nz           or      colors1, mask_2
+                        test    pixels1, t_mask_3 wz
+        if_nz           or      colors1, mask_3
+_sr0                    and     0-0, colors1
+                        andn    pixels1, colors1
+_st0                    or      0-0, pixels1
+
+                        add     tile_ptr, #4
+
+                        rdlong  pixels1, tile_ptr
+                        mov     colors1, #0
+                        test    pixels1, t_mask_0 wz
+        if_nz           or      colors1, mask_0
+                        test    pixels1, t_mask_1 wz
+        if_nz           or      colors1, mask_1
+                        test    pixels1, t_mask_2 wz
+        if_nz           or      colors1, mask_2
+                        test    pixels1, t_mask_3 wz
+        if_nz           or      colors1, mask_3
+_sr1                    and     0-0, colors1
+                        andn    pixels1, colors1
+_st1                    or      0-0, pixels1
+
+                        add     _sr0, inc_dest_2
+                        add     _sr1, inc_dest_2
+                        add     _st0, inc_dest_2
+                        add     _st1, inc_dest_2
+
+                        add     video_ptr, #1
+                        djnz    ecnt, #_l4
 
 // scanline buffer output
 
@@ -362,6 +432,7 @@ _wr1                    wrlong  0-0, sbuf_ptr
 // driver parameters
 
 hub_video_ram           long    $0000 + (MAX_SPRITES * 4)
+hub_video_overlay_ram   long    $0000 + (MAX_SPRITES * 4)
 hub_tiles_data          long    $0000 + (MAX_SPRITES * 4)
 hub_sprites_data        long    $0000 + (MAX_SPRITES * 4)
 
@@ -398,15 +469,19 @@ tile_mask               long    %00000000_11111111_00000000_00000000
 
 neg_clip                long    -32
 
+overlay1_start          long    0
+overlay1_lines          long    0
+overlay2_start          long    0
+overlay2_lines          long    0
+
 pixels1                 long    0
 pixels2                 long    0
 colors1                 long    0
 colors2                 long    0
 
-vram_expand_h_flag      long    VRAM_EXPAND_H << 5
-vram_expand_v_flag      long    VRAM_EXPAND_V << 5
-
 // uninitialised data and/or temporaries
+
+sprites_table           res     MAX_SPRITES
 
 a                       res     1
 b                       res     1
@@ -430,11 +505,64 @@ pcnt                    res     1
 tile_ptr                res     1
 video_ptr               res     1
 
-sprites_table           res     MAX_SPRITES
+// code and/or data repurposed for scanline buffer
 
-sbuf_ptr                res     8                           // Reserve some space for off-screen sprites
-sbuf                    res     H_RES/4                     // All locations from here are reserved for the scanline buffer
-                        res     8
+setup
+sbuf_ptr
+                        mov     offset, PAR
+                        shr     offset, #2
+                        and     offset, #$7
+
+                        rdbyte  data, cog_param_addr
+                        add     cog_param_addr, #1
+                        rdbyte  data1, cog_param_addr
+                        add     cog_param_addr, #1
+                        rdbyte  data2, cog_param_addr
+
+sbuf
+                        test    vram_expand_h_flag, PAR wz
+        if_nz           add     _htiles1, #VRAM_TILES_H
+        if_nz           add     _htiles2, #VRAM_TILES_H
+        if_nz           add     _htiles3, #VRAM_TILES_H
+        if_nz           add     _hmul1, #1
+        if_nz           shl     hub_vram_size, #1
+                        test    vram_expand_v_flag, PAR wz
+        if_nz           add     _vsub1, #V_RES
+        if_nz           shl     hub_vram_size, #1
+
+                        add     hub_video_overlay_ram, hub_vram_size
+
+                        mov     overlay1_lines, data1           // overlay 1 rows
+                        and     overlay1_lines, #$0F
+                        mov     overlay1_start, data1
+                        shr     overlay1_start, #4              // overlay 1 start
+
+                        mov     overlay2_lines, data2           // overlay 2 rows
+                        and     overlay2_lines, #$0F
+
+                        shr     data2, #4
+                        mov     overlay2_start, #VRAM_TILES_V   // overlay 2 start from bottom
+                        sub     overlay2_start, overlay2_lines
+                        sub     overlay2_start, data2
+
+                        test    vram_expand_h_flag, PAR wz
+                        test    vram_expand_v_flag, PAR wz
+
+                        shl     overlay1_start, #3
+                        shl     overlay1_lines, #3
+                        shl     overlay2_start, #3
+                        shl     overlay2_lines, #3
+
+                        jmp     #vsync
+
+vram_expand_h_flag      long    VRAM_EXPAND_H << 5
+vram_expand_v_flag      long    VRAM_EXPAND_V << 5
+
+hub_vram_size           long    VRAM_TILES_H * VRAM_TILES_V
+
+cog_param_addr          long    $7E00
+
+data                    res     1
 
                         fit     $1F0
 
