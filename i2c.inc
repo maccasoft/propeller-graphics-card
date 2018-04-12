@@ -22,9 +22,9 @@ eeprom_read
                     call    #i2c_write
 
                     // Read i2c_data
-_l4r                cmp     ccnt, #1 wz
+_l4r                add     i2c_addr, #1
+                    cmp     ccnt, #1 wz
             if_z    jmp     #_l5r
-                    add     i2c_addr, #1
                     test    i2c_addr, block_boundary wz
             if_z    jmp     #_l5r
                     mov     ack, #I2C_ACK
@@ -102,7 +102,7 @@ i2c_read
                     mov     i2c_data, #0
                     andn    DIRA, i2c_sda
 
-                    mov     ecnt, #8
+                    mov     mask, #8
 _l3
                     nop
                     nop
@@ -110,7 +110,7 @@ _l3
                     test    i2c_sda, INA wc
                     rcl     i2c_data, #1
                     andn    OUTA, i2c_scl
-                    djnz    ecnt, #_l3
+                    djnz    mask, #_l3
 
                     cmp     ack, #I2C_NAK wz
             if_z    or      OUTA, i2c_sda

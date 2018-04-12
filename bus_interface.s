@@ -454,19 +454,19 @@ restart             long    ($0004 << 16) | ($F004 << 2)
 eeprom_write
                     // Select the device & send address
                     call    #i2c_start
-                    mov     data, i2c_addr
-                    shr     data, #15
-                    and     data, #$02
-                    or      data, #EEPROM_ADDR | I2C_WRITE
+                    mov     i2c_data, i2c_addr
+                    shr     i2c_data, #15
+                    and     i2c_data, #$02
+                    or      i2c_data, #EEPROM_ADDR | I2C_WRITE
                     call    #i2c_write
-                    mov     data, i2c_addr
-                    shr     data, #8
+                    mov     i2c_data, i2c_addr
+                    shr     i2c_data, #8
                     call    #i2c_write
-                    mov     data, i2c_addr
+                    mov     i2c_data, i2c_addr
                     call    #i2c_write
 
                     // Write data
-_l4w                rdbyte  data, i2c_hub_addr
+_l4w                rdbyte  i2c_data, i2c_hub_addr
                     call    #i2c_write
                     add     i2c_hub_addr, #1
                     add     i2c_addr, #1
