@@ -1,6 +1,6 @@
 ## Propeller Graphics Card
 
-Utilities and demo programs designed to run with CP/M.
+Utilities and demo programs designed to run from CP/M.
 
  * **fwupd.com**  
    Firmware update utility.  
