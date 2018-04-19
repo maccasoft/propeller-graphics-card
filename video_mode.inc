@@ -79,7 +79,7 @@ i2c_sda                 long    1 << i2c_sda_pin
 block_boundary          long    $0000_FFFF
 
 cog_driver_size         long    2048
-cog_driver_addr         long    $7600
+cog_driver_addr         long    $6600
 
 inc_par_offset          long    %00000000000001_00000000000000_0_000
 

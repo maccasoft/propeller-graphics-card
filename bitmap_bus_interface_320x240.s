@@ -26,7 +26,7 @@
                     .pasm
                     .compress off
 
-                    .section .cog_bus_interface, "ax"
+                    .section .cog_bitmap_bus_interface_320x240, "ax"
 
 #include "defines.inc"
 
@@ -95,71 +95,55 @@ loop
 // ------------------------------------------------------------------------
 
 _port40_table       long    set_mode            // 00
-                    long    loop                // 01
+                    long    set_pixel           // 01
                     long    loop                // 02
-                    long    set_x_scroll        // 03
-                    long    set_y_scroll        // 04
+                    long    loop                // 03
+                    long    loop                // 04
                     long    loop                // 05
-                    long    set_tiles_ptr       // 06
-                    long    set_sprites_ptr     // 07
+                    long    loop                // 06
+                    long    loop                // 07
                     long    loop                // 08
-                    long    loop                // 09
+                    long    clear_screen        // 09
                     long    loop                // 0A
-                    long    loop                // 0B
-                    long    write_sprite_ram    // 0C
-                    long    write_video_ram     // 0D
-                    long    write_bitmap_ram    // 0E
-                    long    write_ram           // 0F
+                    long    write_palette       // 0B
+                    long    loop                // 0C
+                    long    loop                // 0D
+                    long    loop                // 0E
+                    long    loop                // 0F
 
 set_mode
                     mov     data, #0
                     mov     data1, #0
                     mov     data2, #0
-                    movs    port41_handler, #_port41_table+12
+                    movs    port41_handler, #_port41_table+1
                     jmp     #loop
 
-set_x_scroll
-                    movs    port41_handler, #_port41_table+8
+set_pixel
+                    mov     data, #0
+                    mov     data1, #0
+                    mov     data2, #0
+                    movs    port41_handler, #_port41_table+4
                     jmp     #loop
 
-set_y_scroll
-                    movs    port41_handler, #_port41_table+10
+clear_screen
+                    or      OUTA, bus_wait
+
+                    mov     a, #0
+                    mov     ptr, #0
+                    mov     ecnt, #$1E
+                    shl     ecnt, #8
+_l6                 wrlong  a, ptr
+                    add     ptr, #4
+                    djnz    ecnt, #_l6
+
+                    andn    OUTA, bus_wait
                     jmp     #loop
 
-set_tiles_ptr
-                    movs    port41_handler, #_port41_table+3
-                    jmp     #loop
-
-set_sprites_ptr
-                    movs    port41_handler, #_port41_table+5
-                    jmp     #loop
-
-write_sprite_ram
-                    mov     hub_addr, hub_sprite_ram
-                    mov     hub_addr_top, hub_video_ram
-                    mov     hub_addr_low, hub_sprite_ram
+write_palette
+                    mov     hub_addr, hub_palette
+                    mov     hub_addr_top, hub_palette_top
+                    mov     hub_addr_low, hub_palette
                     movs    port41_handler, #_port41_table+7
-                    jmp     #loop
-
-write_video_ram
-                    mov     hub_addr, hub_video_ram
-                    mov     hub_addr_top, hub_bitmap_ram
-                    mov     hub_addr_low, hub_video_ram
-                    movs    port41_handler, #_port41_table+1
-                    jmp     #loop
-
-write_bitmap_ram
-                    mov     hub_addr, hub_bitmap_ram
-                    mov     hub_addr_top, hub_bitmap_ram_top
-                    mov     hub_addr_low, hub_bitmap_ram
-                    movs    port41_handler, #_port41_table+1
-                    jmp     #loop
-
-write_ram
-                    mov     hub_addr, #0
-                    mov     hub_addr_top, hub_ram_top
-                    mov     hub_addr_low, #0
-                    movs    port41_handler, #_port41_table+1
                     jmp     #loop
 
 // ------------------------------------------------------------------------
@@ -167,20 +151,13 @@ write_ram
 // ------------------------------------------------------------------------
 
 _port41_table       long    write_byte
-                    long    add_hub_addr        // +1
-                    long    add_hub_addr_hi     // +2
-                    long    set_tiles_addr      // +3
-                    long    set_tiles_addr_hi   // +4
-                    long    set_sprites_addr    // +5
-                    long    set_sprites_addr_hi // +6
-                    long    add_sprite_offset   // +7
-                    long    set_scroll          // +8
-                    long    set_xs              // +9
-                    long    set_scroll          // +10
-                    long    set_ys              // +11
-                    long    set_mode_param      // +12
-                    long    set_mode_param1     // +13
-                    long    set_mode_param2     // +14
+                    long    set_mode_param      // +1
+                    long    set_mode_param1     // +2
+                    long    set_mode_param2     // +3
+                    long    set_pixel_param     // +4
+                    long    set_pixel_param1    // +5
+                    long    set_pixel_param2    // +6
+                    long    add_palette_offset  // +7
 
 write_byte
                     shr     bus, #8
@@ -188,77 +165,6 @@ write_byte
                     add     hub_addr, #1
                     cmp     hub_addr, hub_addr_top wc,wz
         if_ae       mov     hub_addr, hub_addr_low
-                    jmp     #loop
-
-add_hub_addr
-                    and     bus, data_bus_mask
-                    shr     bus, #8
-                    add     hub_addr, bus
-                    add     port41_handler, #1
-                    jmp     #loop
-
-add_hub_addr_hi
-                    and     bus, data_bus_mask
-                    add     hub_addr, bus
-                    movs    port41_handler, #_port41_table
-                    jmp     #loop
-
-set_tiles_addr
-                    and     bus, data_bus_mask
-                    shr     bus, #8
-                    mov     hub_tiles_data, hub_bitmap_ram
-                    add     hub_tiles_data, bus
-                    add     port41_handler, #1
-                    jmp     #loop
-
-set_tiles_addr_hi
-                    and     bus, data_bus_mask
-                    add     hub_tiles_data, bus
-                    wrword  hub_tiles_data, hub_tiles_ptr
-                    movs    port41_handler, #_port41_table
-                    jmp     #loop
-
-set_sprites_addr
-                    and     bus, data_bus_mask
-                    shr     bus, #8
-                    mov     hub_sprites_data, hub_bitmap_ram
-                    add     hub_sprites_data, bus
-                    add     port41_handler, #1
-                    jmp     #loop
-
-set_sprites_addr_hi
-                    and     bus, data_bus_mask
-                    add     hub_sprites_data, bus
-                    wrword  hub_sprites_data, hub_sprites_ptr
-                    movs    port41_handler, #_port41_table
-                    jmp     #loop
-
-add_sprite_offset
-                    and     bus, data_bus_mask
-                    shr     bus, #6
-                    add     hub_addr, bus
-                    movs    port41_handler, #_port41_table
-                    jmp     #loop
-
-set_scroll
-                    and     bus, data_bus_mask
-                    shr     bus, #8
-                    mov     data, bus
-                    add     port41_handler, #1
-                    jmp     #loop
-
-set_xs
-                    and     bus, data_bus_mask wz
-                    or      bus, data
-                    wrword  bus, hub_xs_ptr
-                    movs    port41_handler, #_port41_table
-                    jmp     #loop
-
-set_ys
-                    and     bus, data_bus_mask wz
-                    or      bus, data
-                    wrword  bus, hub_ys_ptr
-                    movs    port41_handler, #_port41_table
                     jmp     #loop
 
 set_mode_param
@@ -303,14 +209,10 @@ _l7                 wrlong  a, ptr
                     add     a, #video_mode_loaders
                     movs    _drv0, a
                     mov     i2c_hub_addr, cog_driver_addr
-_drv0               mov     i2c_addr, 0-0
+_drv0               mov     i2c_addr, 0-0 wz
+        if_z        jmp     #default_driver
                     mov     ccnt, cog_driver_size
                     call    #eeprom_read
-
-                    mov     ptr, cog_driver_addr
-                    add     ptr, #4
-                    add     ptr, #2
-                    rdword  vsync_line, ptr
 
                     mov     ptr, cog_param_addr
                     wrbyte  data, ptr
@@ -332,23 +234,127 @@ _drv0               mov     i2c_addr, 0-0
                     rdlong  b, hub_fi wz
         if_nz       jmp     #$-1
 
-                    rdword  hub_bitmap_ram, hub_tiles_ptr
-                    mov     hub_tiles_data, hub_bitmap_ram
-                    mov     hub_sprites_data, hub_bitmap_ram
+                    movs    port41_handler, #_port41_table+4
 
-                    mov     hub_bitmap_ram_top, hub_attributes_ptr
-                    sub     hub_bitmap_ram_top, hub_bitmap_ram
-                    andn    hub_bitmap_ram_top, #$3F
-                    add     hub_bitmap_ram_top, hub_bitmap_ram
+                    jmp     #clear_screen
 
-                    mov     hub_addr, hub_video_ram
-                    mov     hub_addr_top, hub_bitmap_ram
-                    mov     hub_addr_low, hub_video_ram
+default_driver
+                    mov     ptr, hub_palette
+                    wrlong  palette, ptr
+                    add     ptr, #4
+                    wrlong  palette+1, ptr
 
+                    // select driver from user selection
+                    mov     a, INA
+                    shr     a, #mode_pin_0
+                    and     a, #$03
+                    movs    _drv1, #video_drivers
+                    add     _drv1, a
+
+                    // load the scanline renderers from eeprom
+                    mov     i2c_addr, scanline_renderer
+                    mov     i2c_hub_addr, cog_driver_addr
+                    mov     ccnt, cog_driver_size
+                    call    #eeprom_read
+
+                    // start the renderers
+                    mov     a, cog_driver_addr
+                    shl     a, #2
+                    or      a, #%1000
+                    mov     ecnt, #COGS
+_l6b                coginit a
+                    add     a, inc_par_offset
+                    djnz    ecnt, #_l6b
+
+                    // load the video driver code from eeprom
+_drv1               mov     i2c_addr, 0-0
+                    mov     i2c_hub_addr, cog_driver_addr
+                    mov     ccnt, cog_driver_size
+                    call    #eeprom_read
+
+                    neg     b, #1
+                    wrlong  b, hub_fi
+
+                    mov     a, hub_fi
+                    shl     a, #14
+                    or      a, cog_driver_addr
+                    shl     a, #2
+                    or      a, #%1000
+                    coginit a
+
+                    rdlong  b, hub_fi wz
+        if_nz       jmp     #$-1
+
+                    movs    port41_handler, #_port41_table+4
+
+                    jmp     #clear_screen
+
+set_pixel_param
+                    shr     bus, #8
+                    mov     data, bus
+                    and     data, #$FF
+                    add     port41_handler, #1
+                    jmp     #loop
+
+set_pixel_param1
+                    shr     bus, #8
+                    mov     data1, bus
+                    and     data1, #$FF
+                    add     port41_handler, #1
+                    jmp     #loop
+
+set_pixel_param2
+                    shr     bus, #8
+                    mov     data2, bus
+                    and     data2, #$FF
+                    movs    port41_handler, #_port41_table+4
+
+                    // data  = y
+
+                    mov     ptr, data
+                    shl     ptr, #7
+
+                    // data1 = x
+
+                    test    data2, #$80 wz      // add 8th bit from data2
+        if_nz       add     data1, #256
+
+                    cmpsub  data1, #160 wc      // fast division
+        if_c        add     ptr, #64
+                    cmpsub  data1, #80 wc
+        if_c        add     ptr, #32
+                    cmpsub  data1, #40 wc
+        if_c        add     ptr, #16
+                    cmpsub  data1, #20 wc
+        if_c        add     ptr, #8
+                    cmpsub  data1, #10 wc
+        if_c        add     ptr, #4
+
+                    mov     b, data1
+                    shl     data1, #1
+                    add     data1, b
+
+                    // data2 = pixel (0-7)
+
+                    rdlong  data, ptr
+
+                    mov     a, #7
+                    shl     a, data1
+                    andn    data, a
+
+                    and     data2, #7
+                    shl     data2, data1
+                    or      data, data2
+
+                    wrlong  data, ptr
+
+                    jmp     #loop
+
+add_palette_offset
+                    shr     bus, #8
+                    and     bus, #7
+                    add     hub_addr, bus
                     movs    port41_handler, #_port41_table
-
-                    andn    OUTA, bus_wait
-
                     jmp     #loop
 
 // ------------------------------------------------------------------------
@@ -510,20 +516,10 @@ cog_driver_size     long    2048
 cog_driver_addr     long    $6600
 cog_param_addr      long    $6E00
 
-hub_sprite_ram      long    $0000
-hub_video_ram       long    $0000 + (MAX_SPRITES * 4)
-hub_bitmap_ram      long    $0000 + (MAX_SPRITES * 4)
-hub_bitmap_ram_top  long    $0000 + (MAX_SPRITES * 4)
-hub_ram_top         long    $8000
+hub_video_ram       long    $0000
+hub_palette         long    $7800
+hub_palette_top     long    $7808
 
-hub_tiles_data      long    $0000 + (MAX_SPRITES * 4)
-hub_sprites_data    long    $0000 + (MAX_SPRITES * 4)
-
-hub_attributes_ptr
-hub_tiles_ptr       long    $7EB0
-hub_sprites_ptr     long    $7EB2
-hub_xs_ptr          long    $7EB4
-hub_ys_ptr          long    $7EB6
 hub_fi              long    $7EBC
 hub_sbuf            long    $7EC0
 
@@ -531,11 +527,20 @@ vsync_line          long    239
 
 ms5_delay           long    80_000 * 5
 
+palette             long    $F0_30_C0_00, $FC_3C_CC_0C
+
+video_drivers       long    @__load_start_cog_ntsc_320x240_video_driver
+                    long    @__load_start_cog_pal_320x240_video_driver
+                    long    @__load_start_cog_vga_320x240_video_driver
+                    long    @__load_start_cog_vga_320x240_video_driver
+
+scanline_renderer   long    @__load_start_cog_bitmap_scanline_renderer_320x240
+
 video_mode_loaders
-                    long    @__load_start_cog_320x240_video_mode            // 00h
-                    long    @__load_start_cog_256x192_video_mode            // 01h
-                    long    @__load_start_cog_256x224_video_mode            // 02h
-                    long    @__load_start_cog_bitmap_bus_interface_320x240  // 03h
+                    long    @__load_start_cog_bus_interface                 // 00h
+                    long    @__load_start_cog_bus_interface                 // 01h
+                    long    @__load_start_cog_bus_interface                 // 02h
+                    long    0                                               // 03h
                     long    @__load_start_cog_bitmap_bus_interface_256x192  // 04h
                     long    @__load_start_cog_bitmap_bus_interface_256x224  // 05h
 

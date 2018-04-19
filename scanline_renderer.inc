@@ -560,7 +560,7 @@ vram_expand_v_flag      long    VRAM_EXPAND_V << 5
 
 hub_vram_size           long    VRAM_TILES_H * VRAM_TILES_V
 
-cog_param_addr          long    $7E00
+cog_param_addr          long    $6E00
 
 data                    res     1
 
