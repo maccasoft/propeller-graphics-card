@@ -2,25 +2,26 @@
 #include "defines.inc"
 
 start
-                        add     cog_param_addr, #1
+                        mov     ptr, PAR
+                        rdbyte  data, ptr
+                        add     ptr, #1
+                        rdbyte  data1, ptr
+                        add     ptr, #1
+                        rdbyte  data2, ptr
 
-                        test    vram_expand_h_flag, PAR wz
+                        test    data, #VRAM_EXPAND_H wz
         if_nz           shl     hub_vram_size, #1
-                        test    vram_expand_v_flag, PAR wz
+                        test    data, #VRAM_EXPAND_V wz
         if_nz           shl     hub_vram_size, #1
                         add     hub_bitmap_ram, hub_vram_size
 
-                        rdbyte  a, cog_param_addr
-                        and     a, #$0F wz
+                        and     data1, #$0F wz
         if_nz           add     hub_bitmap_ram, #VRAM_TILES_H
-        if_nz           djnz    a, #$-1
+        if_nz           djnz    data1, #$-1
 
-                        add     cog_param_addr, #1
-
-                        rdbyte  a, cog_param_addr
-                        and     a, #$0F wz
+                        and     data2, #$0F wz
         if_nz           add     hub_bitmap_ram, #VRAM_TILES_H
-        if_nz           djnz    a, #$-1
+        if_nz           djnz    data2, #$-1
 
                         wrword  hub_bitmap_ram, hub_tiles_ptr
                         wrword  hub_bitmap_ram, hub_sprites_ptr
@@ -39,8 +40,8 @@ start
                         call    #eeprom_read
 
                         // start the renderers
-                        mov     a, PAR
-                        shl     a, #14+3
+                        mov     a, data
+                        shl     a, #16+3
                         or      a, cog_driver_addr
                         shl     a, #2
                         or      a, #%1000
@@ -79,7 +80,6 @@ block_boundary          long    $0000_FFFF
 
 cog_driver_size         long    2048
 cog_driver_addr         long    $7600
-cog_param_addr          long    $7E00
 
 inc_par_offset          long    %00000000000001_00000000000000_0_000
 
@@ -93,15 +93,14 @@ hub_tiles_ptr           long    $7EB0
 hub_sprites_ptr         long    $7EB2
 hub_fi                  long    $7EBC
 
-vram_expand_h_flag      long    VRAM_EXPAND_H << 2
-vram_expand_v_flag      long    VRAM_EXPAND_V << 2
-
 // uninitialised data and/or temporaries
 
 a                       .res    1
 b                       .res    1
 ptr                     .res    1
 data                    .res    1
+data1                   .res    1
+data2                   .res    1
 ack                     .res    1
 mask                    .res    1
 ecnt                    .res    1

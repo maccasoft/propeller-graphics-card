@@ -32,7 +32,7 @@
 
                     .org    0
 
-start               mov     OUTA, #0
+start               mov     OUTA, bus_wait
                     mov     DIRA, bus_wait
                     jmp     #init
 
@@ -74,7 +74,12 @@ port43_handler      or      OUTA, bus_wait
 // ------------------------------------------------------------------------
 
 init
-                    mov     data, #$00        	// default video mode
+                    mov     ptr, PAR
+                    rdbyte  data, ptr
+                    add     ptr, #1
+                    rdbyte  data1, ptr
+                    add     ptr, #1
+                    rdbyte  data2, ptr
                     jmp     #set_mode_param_end
 
 loop
@@ -317,9 +322,8 @@ _drv0               mov     i2c_addr, 0-0
                     neg     b, #1
                     wrlong  b, hub_fi
 
-                    mov     a, data
-                    and     a, #$FF
-                    shl     a, #16
+                    mov     a, cog_param_addr
+                    shl     a, #14
                     or      a, cog_driver_addr
                     shl     a, #2
                     or      a, #%1000
@@ -340,6 +344,7 @@ _drv0               mov     i2c_addr, 0-0
                     mov     hub_addr, hub_video_ram
                     mov     hub_addr_top, hub_bitmap_ram
                     mov     hub_addr_low, hub_video_ram
+
                     movs    port41_handler, #_port41_table
 
                     andn    OUTA, bus_wait
