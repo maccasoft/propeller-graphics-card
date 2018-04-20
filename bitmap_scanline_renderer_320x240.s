@@ -271,7 +271,7 @@ str4                    mov     0-0, colors1
 emit
                         rdlong  a, hub_fi
                         cmp     a, scnt wz,wc
-            if_ne       jmp     #$-2                        // wait for line fetch start
+        if_ne           jmp     #$-2                        // wait for line fetch start
 
                         mov     sbuf_ptr, hub_sbuf
                         wrlong  sbuf, sbuf_ptr
@@ -304,11 +304,11 @@ _wr0                    wrlong  0-0, sbuf_ptr
                         sub     sbuf_ptr, i2s7 wc
 _wr1                    wrlong  0-0, sbuf_ptr
                         sub     _wr1, inc_dest_2
-            if_nc       djnz    sbuf_ptr, #_wr0
+        if_nc           djnz    sbuf_ptr, #_wr0
 
                         add     scnt, #COGS                 // next line to render
                         cmp     scnt, #V_RES wc,wz
-            if_b        jmp     #loop
+        if_b            jmp     #loop
 
                         jmp     #vsync
 

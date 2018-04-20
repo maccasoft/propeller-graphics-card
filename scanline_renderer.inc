@@ -124,9 +124,9 @@ _htiles3    if_z        mov     ccnt, #VRAM_TILES_H
 _src1h                  mov     colors1, 0-0
 _src2h                  mov     colors2, 0-0
 
-            if_nz       shr     colors1, b
-            if_nz       shl     colors2, x
-            if_nz       or      colors1, colors2
+        if_nz           shr     colors1, b
+        if_nz           shl     colors2, x
+        if_nz           or      colors1, colors2
 
 _dst1h                  mov     0-0, colors1
 
@@ -142,14 +142,14 @@ _dst1h                  mov     0-0, colors1
                         mov     pcnt, #MAX_SPRITES
 
 _tile                   mov     tile, 0-0 wz
-            if_z        jmp     #_next
+        if_z            jmp     #_next
 
                         test    tile, y_sign_mask wc        // check 9th bit
                         mov     y, tile
                         shl     y, #16
                         rcr     y, #24                      // sign-extend y
                         cmps    y, neg_clip wz,wc
-            if_c        and     y, #$1FF                    // max -32
+        if_c            and     y, #$1FF                    // max -32
 
                         mov     h, tile                     // calculate height
                         shr     h, #25
@@ -158,15 +158,15 @@ _tile                   mov     tile, 0-0 wz
 
                         mov     a, scnt                     // check sprite scanline visibility
                         subs    a, y  wc,wz
-            if_c        jmp     #_next
+        if_c            jmp     #_next
                         cmp     a, h wc,wz
-            if_nc       jmp     #_next
+        if_nc           jmp     #_next
 
                         test    tile, flip_mask wz          // adjust y if sprite is flipped
-            if_nz       mov     y, h
-            if_nz       sub     y, #1
-            if_nz       sub     y, a
-            if_nz       mov     a, y
+        if_nz           mov     y, h
+        if_nz           sub     y, #1
+        if_nz           sub     y, a
+        if_nz           mov     a, y
                         shl     a, #3                       // 8-bits per pixel
                         shl     h, #3
 
@@ -183,11 +183,11 @@ _tile                   mov     tile, 0-0 wz
                         add     tile_ptr, a
                         test    tile, mirror_mask wz
                         cmp     ecnt, #16 wc
-     if_nz_and_nc       add     tile_ptr, h
-            if_nc       cmp     ecnt, #24 wc
-     if_nz_and_nc       add     tile_ptr, h
-            if_nc       cmp     ecnt, #32 wc
-     if_nz_and_nc       add     tile_ptr, h
+        if_nz_and_nc    add     tile_ptr, h
+        if_nc           cmp     ecnt, #24 wc
+        if_nz_and_nc    add     tile_ptr, h
+        if_nc           cmp     ecnt, #32 wc
+        if_nz_and_nc    add     tile_ptr, h
                         sumz    h, #4
 
                         test    tile, x_sign_mask wc        // check 9th bit
@@ -195,7 +195,7 @@ _tile                   mov     tile, 0-0 wz
                         shl     x, #24
                         rcr     x, #24                      // sign-extend x
                         cmps    x, neg_clip wz,wc
-            if_c        and     x, #$1FF                    // max -32
+        if_c            and     x, #$1FF                    // max -32
 
                         movd    _src0, #sbuf                // sets source and destination buffer pointers
                         movd    _src1, #sbuf+1
@@ -228,27 +228,27 @@ _l2                     rdlong  data1, tile_ptr
 _l2b                    test    tile, mirror_mask wc
                         sumc    tile_ptr, h
 
-            if_c        ror     data1, #24
-            if_c        mov     a, data1
-            if_c        and     a, swap_mask
-            if_c        ror     data1, #16
-            if_c        andn    data1, swap_mask
-            if_c        or      a, data1
+        if_c            ror     data1, #24
+        if_c            mov     a, data1
+        if_c            and     a, swap_mask
+        if_c            ror     data1, #16
+        if_c            andn    data1, swap_mask
+        if_c            or      a, data1
 
-            if_c        ror     data2, #24
-            if_c        mov     data1, data2
-            if_c        and     data1, swap_mask
-            if_c        ror     data2, #16
-            if_c        andn    data2, swap_mask
-            if_c        or      data1, data2
+        if_c            ror     data2, #24
+        if_c            mov     data1, data2
+        if_c            and     data1, swap_mask
+        if_c            ror     data2, #16
+        if_c            andn    data2, swap_mask
+        if_c            or      data1, data2
 
-            if_c        mov     data2, a
+        if_c            mov     data2, a
 
                         mov     pixels1, data1
                         shl     pixels1, x
                         or      pixels1, pixels2
                         cmp     x, #0 wz
-            if_nz       mov     pixels2, data1
+        if_nz           mov     pixels2, data1
                         shr     pixels2, b
 
                         mov     colors1, #0
@@ -268,7 +268,7 @@ _dst0                   or      0-0, pixels1
                         shl     pixels1, x
                         or      pixels1, pixels2
                         cmp     x, #0 wz
-            if_nz       mov     pixels2, data2
+        if_nz           mov     pixels2, data2
                         shr     pixels2, b
 
                         mov     colors1, #0
@@ -294,7 +294,7 @@ _dst1                   or      0-0, pixels1
 
                         mov     ccnt, #8
                         cmp     ecnt, #8  wc,wz
-            if_nc       jmp     #_l2
+        if_nc           jmp     #_l2
 
                         mov     data1, #0
                         mov     data2, #0
@@ -307,14 +307,14 @@ _next                   add     _tile, #1
 
                         mov     loffs, scnt
                         cmpsub  loffs, overlay1_start wz,wc
-            if_c        cmp     loffs, overlay1_lines wz,wc
-            if_c        jmp     #overlay
+        if_c            cmp     loffs, overlay1_lines wz,wc
+        if_c            jmp     #overlay
 
                         mov     loffs, scnt
                         cmpsub  loffs, overlay2_start wz,wc
-            if_c        cmp     loffs, overlay2_lines wz,wc
-            if_c        add     loffs, overlay1_lines
-            if_nc       jmp     #emit
+        if_c            cmp     loffs, overlay2_lines wz,wc
+        if_c            add     loffs, overlay1_lines
+        if_nc           jmp     #emit
 
 overlay
 #if VRAM_TILES_H == 40
@@ -388,7 +388,7 @@ _st1                    or      0-0, pixels1
 emit
                         rdlong  a, hub_fi
                         cmp     a, scnt wz,wc
-            if_ne       jmp     #$-2                        // wait for line fetch start
+        if_ne           jmp     #$-2                        // wait for line fetch start
 
                         mov     sbuf_ptr, hub_sbuf
                         wrlong  sbuf, sbuf_ptr
@@ -421,11 +421,11 @@ _wr0                    wrlong  0-0, sbuf_ptr
                         sub     sbuf_ptr, i2s7 wc
 _wr1                    wrlong  0-0, sbuf_ptr
                         sub     _wr1, inc_dest_2
-            if_nc       djnz    sbuf_ptr, #_wr0
+        if_nc           djnz    sbuf_ptr, #_wr0
 
                         add     scnt, #COGS                 // next line to render
                         cmp     scnt, #V_RES wc,wz
-            if_b        jmp     #loop
+        if_b            jmp     #loop
 
                         jmp     #vsync
 

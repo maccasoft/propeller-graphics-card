@@ -95,19 +95,19 @@ hub_fi                  long    $7EBC
 
 // uninitialised data and/or temporaries
 
-a                       .res    1
-b                       .res    1
-ptr                     .res    1
-data                    .res    1
-data1                   .res    1
-data2                   .res    1
-ack                     .res    1
-mask                    .res    1
-ecnt                    .res    1
-ccnt                    .res    1
+a                       res     1
+b                       res     1
+ptr                     res     1
+data                    res     1
+data1                   res     1
+data2                   res     1
+ack                     res     1
+mask                    res     1
+ecnt                    res     1
+ccnt                    res     1
 
-i2c_addr                .res    1
-i2c_hub_addr            .res    1
-i2c_data                .res    1
+i2c_addr                res     1
+i2c_hub_addr            res     1
+i2c_data                res     1
 
                         fit     $1F0

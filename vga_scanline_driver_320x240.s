@@ -25,7 +25,7 @@
                         .org     0
 
 driver                  call    #setup                      //  -4   once (replaced by 16 entry table)
-                        .res    15
+                        res     15
 
                         mov     dira, mask                  // drive outputs
 
@@ -94,7 +94,7 @@ blank                   mov     vscl, line                  // 256/640
                         mov     frqb, buf0                  // always use primary
                         shr     frqb, #1                    // added twice #1{/2}
 
-            if_c        call    #load wc                    // load first line
+        if_c            call    #load wc                    // load first line
 
                         mov     vscl, wrap                  // horizontal sync
                         waitvid sync, wrap_value
