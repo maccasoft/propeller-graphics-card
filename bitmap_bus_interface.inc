@@ -314,7 +314,7 @@ set_pixel_param2
 
 add_palette_offset
                         shr     bus, #8
-                        and     bus, #7
+                        and     bus, #$0F
                         add     hub_addr, bus
                         movs    port41_handler, #_port41_table
                         jmp     #loop
@@ -344,7 +344,7 @@ cog_param_addr          long    $6E00
 
 hub_video_ram           long    $0000
 hub_palette             long    $7800
-hub_palette_top         long    $7808
+hub_palette_top         long    $7810
 
 hub_fi                  long    $7EBC
 hub_sbuf                long    $7EC0

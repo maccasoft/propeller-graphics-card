@@ -352,7 +352,7 @@ set_pixel_param2
 
 add_palette_offset
                         shr     bus, #8
-                        and     bus, #7
+                        and     bus, #$07
                         add     hub_addr, bus
                         movs    port41_handler, #_port41_table
                         jmp     #loop
