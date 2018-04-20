@@ -106,8 +106,4 @@ mask                    res     1
 ecnt                    res     1
 ccnt                    res     1
 
-i2c_addr                res     1
-i2c_hub_addr            res     1
-i2c_data                res     1
-
                         fit     $1F0

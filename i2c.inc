@@ -123,3 +123,7 @@ _l3
 
                         andn    OUTA, i2c_sda
 i2c_read_ret            ret
+
+i2c_addr                long    0
+i2c_hub_addr            long    0
+i2c_data                long    0
