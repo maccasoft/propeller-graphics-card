@@ -1,3 +1,27 @@
+/*
+ * Propeller Graphics Card for RC2014 Computer
+ *
+ * I/O Addres line mapping:
+ *
+ *           P8 P7 P6 P5 P4 P3 P2 P1 P0
+ *            -  1  1  0  x  x  1  0  0
+ *            |  |  |  |  |  |  |  |  |
+ *      D0 ---+  |  |  |  |  |  |  |  |
+ *      M1 ------+  |  |  |  |  |  |  |
+ *      RD ---------+  |  |  |  |  |  |
+ *      WR ------------+  |  |  |  |  |
+ *      A1 ---------------+  |  |  |  |
+ *      A0 ------------------+  |  |  |
+ *      A6 ---------------------+  |  |
+ *      A7,A5,A4,A3,A2 ------------+  |
+ *      IORQ -------------------------+
+ *
+ *      P8 must be masked out (data dbus line)
+ *
+ * Copyright (c) 2018 Marco Maccaferri
+ * MIT Licensed
+ *
+ */
 
                         .org    0
 
@@ -212,10 +236,12 @@ default_driver
                         wrlong  palette, ptr
                         add     ptr, #4
                         wrlong  palette+1, ptr
+#if BPP == 4
                         add     ptr, #4
                         wrlong  palette+2, ptr
                         add     ptr, #4
                         wrlong  palette+3, ptr
+#endif
 
                         // select driver from user selection
                         mov     a, INA
@@ -289,6 +315,39 @@ set_pixel_param2
 
                         // data1 = x
 
+#if BPP == 3
+                        test    data2, #$80 wz      // add 8th bit from data2
+        if_nz           add     data1, #256
+
+                        cmpsub  data1, #160 wc      // fast division
+        if_c            add     ptr, #64
+                        cmpsub  data1, #80 wc
+        if_c            add     ptr, #32
+                        cmpsub  data1, #40 wc
+        if_c            add     ptr, #16
+                        cmpsub  data1, #20 wc
+        if_c            add     ptr, #8
+                        cmpsub  data1, #10 wc
+        if_c            add     ptr, #4
+
+                        mov     b, data1
+                        shl     data1, #1
+                        add     data1, b
+
+                        // data2 = pixel (0-7)
+
+                        rdlong  data, ptr
+
+                        mov     a, #7
+                        shl     a, data1
+                        andn    data, a
+
+                        and     data2, #7
+                        shl     data2, data1
+                        or      data, data2
+
+                        wrlong  data, ptr
+#elif BPP == 4
                         mov     a, data1
                         shr     a, #1
                         add     ptr, a
@@ -309,12 +368,13 @@ set_pixel_param2
                         or      data, data2
 
                         wrbyte  data, ptr
+#endif
 
                         jmp     #loop
 
 add_palette_offset
                         shr     bus, #8
-                        and     bus, #$0F
+                        and     bus, #(2 ^ BPP) - 1
                         add     hub_addr, bus
                         movs    port41_handler, #_port41_table
                         jmp     #loop
@@ -353,10 +413,21 @@ vsync_line              long    V_RES - 1
 
 ms5_delay               long    80_000 * 5
 
+#if BPP == 3
+palette                 long    $F0_30_C0_00, $FC_3C_CC_0C
+#elif BPP == 4
 palette                 long    $A0_20_80_00, $A8_28_88_08
                         long    $F0_30_C0_54, $FC_3C_CC_0C
+#endif
 
-#if V_RES == 192
+#if V_RES == 240
+video_drivers           long    @__load_start_cog_ntsc_320x240_video_driver
+                        long    @__load_start_cog_pal_320x240_video_driver
+                        long    @__load_start_cog_vga_320x240_video_driver
+                        long    @__load_start_cog_vga_320x240_video_driver
+
+scanline_renderer       long    @__load_start_cog_bitmap_scanline_renderer_320x240
+#elif V_RES == 192
 video_drivers           long    @__load_start_cog_ntsc_256x192_video_driver
                         long    @__load_start_cog_pal_256x192_video_driver
                         long    @__load_start_cog_vga_256x192_video_driver
@@ -376,7 +447,11 @@ video_mode_loaders
                         long    @__load_start_cog_bus_interface                 // 00h
                         long    @__load_start_cog_bus_interface                 // 01h
                         long    @__load_start_cog_bus_interface                 // 02h
+#if V_RES == 240
+                        long    0                                               // 03h
+#else
                         long    @__load_start_cog_bitmap_bus_interface_320x240  // 03h
+#endif
 #if V_RES == 192
                         long    0                                               // 04h
 #else
