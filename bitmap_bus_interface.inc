@@ -100,7 +100,7 @@ _port40_table           long    set_mode            // 00
                         long    loop                // 0A
                         long    write_palette       // 0B
                         long    loop                // 0C
-                        long    loop                // 0D
+                        long    write_video_ram     // 0D
                         long    loop                // 0E
                         long    loop                // 0F
 
@@ -108,14 +108,14 @@ set_mode
                         mov     data, #0
                         mov     data1, #0
                         mov     data2, #0
-                        movs    port41_handler, #_port41_table+1
+                        movs    port41_handler, #_port41_table+3
                         jmp     #loop
 
 set_pixel
                         mov     data, #0
                         mov     data1, #0
                         mov     data2, #0
-                        movs    port41_handler, #_port41_table+4
+                        movs    port41_handler, #_port41_table+6
                         jmp     #loop
 
 clear_screen
@@ -136,7 +136,14 @@ write_palette
                         mov     hub_addr, hub_palette
                         mov     hub_addr_top, hub_palette_top
                         mov     hub_addr_low, hub_palette
-                        movs    port41_handler, #_port41_table+7
+                        movs    port41_handler, #_port41_table+9
+                        jmp     #loop
+
+write_video_ram
+                        mov     hub_addr, hub_video_ram
+                        mov     hub_addr_top, hub_video_ram_top
+                        mov     hub_addr_low, hub_video_ram
+                        movs    port41_handler, #_port41_table+1
                         jmp     #loop
 
 // ------------------------------------------------------------------------
@@ -144,13 +151,15 @@ write_palette
 // ------------------------------------------------------------------------
 
 _port41_table           long    write_byte
-                        long    set_mode_param      // +1
-                        long    set_mode_param1     // +2
-                        long    set_mode_param2     // +3
-                        long    set_pixel_param     // +4
-                        long    set_pixel_param1    // +5
-                        long    set_pixel_param2    // +6
-                        long    add_palette_offset  // +7
+                        long    add_hub_addr        // +1
+                        long    add_hub_addr_hi     // +2
+                        long    set_mode_param      // +3
+                        long    set_mode_param1     // +4
+                        long    set_mode_param2     // +5
+                        long    set_pixel_param     // +6
+                        long    set_pixel_param1    // +7
+                        long    set_pixel_param2    // +8
+                        long    add_palette_offset  // +9
 
 write_byte
                         shr     bus, #8
@@ -188,15 +197,6 @@ _l1                     cmp     ecnt, a wz
                         cmp     ecnt, #8 wz
         if_nz           jmp     #_l1
 
-                        // clear hub memory
-                        mov     a, #0
-                        mov     ptr, #0
-                        mov     ecnt, #$20
-                        shl     ecnt, #8
-_l7                     wrlong  a, ptr
-                        add     ptr, #4
-                        djnz    ecnt, #_l7
-
                         mov     a, data
                         and     a, #$07
                         add     a, #video_mode_loaders
@@ -214,9 +214,6 @@ _drv0                   mov     i2c_addr, 0-0 wz
                         add     ptr, #1
                         wrbyte  data2, ptr
 
-                        neg     b, #1
-                        wrlong  b, hub_fi
-
                         mov     a, cog_param_addr
                         shl     a, #14
                         or      a, cog_driver_addr
@@ -224,14 +221,19 @@ _drv0                   mov     i2c_addr, 0-0 wz
                         or      a, #%1000
                         coginit a
 
-                        rdlong  b, hub_fi wz
-        if_nz           jmp     #$-1
-
-                        movs    port41_handler, #_port41_table+4
-
-                        jmp     #clear_screen
+                        jmp     #$                  // endless loop, terminated by loader
 
 default_driver
+                        // clear hub memory
+                        mov     a, #0
+                        mov     ptr, #0
+                        mov     ecnt, #$20
+                        shl     ecnt, #8
+_l7                     wrlong  a, ptr
+                        add     ptr, #4
+                        djnz    ecnt, #_l7
+
+                        // default palette
                         mov     ptr, hub_palette
                         wrlong  palette, ptr
                         add     ptr, #4
@@ -284,7 +286,12 @@ _drv1                   mov     i2c_addr, 0-0
                         rdlong  b, hub_fi wz
         if_nz           jmp     #$-1
 
-                        movs    port41_handler, #_port41_table+4
+                        // defaults to raw bitmap write
+
+                        mov     hub_addr, hub_video_ram
+                        mov     hub_addr_top, hub_video_ram_top
+                        mov     hub_addr_low, hub_video_ram
+                        movs    port41_handler, #_port41_table
 
                         jmp     #clear_screen
 
@@ -306,7 +313,7 @@ set_pixel_param2
                         shr     bus, #8
                         mov     data2, bus
                         and     data2, #$FF
-                        movs    port41_handler, #_port41_table+4
+                        movs    port41_handler, #_port41_table+6
 
                         // data  = y
 
@@ -379,6 +386,19 @@ add_palette_offset
                         movs    port41_handler, #_port41_table
                         jmp     #loop
 
+add_hub_addr
+                        and     bus, data_bus_mask
+                        shr     bus, #8
+                        add     hub_addr, bus
+                        add     port41_handler, #1
+                        jmp     #loop
+
+add_hub_addr_hi
+                        and     bus, data_bus_mask
+                        add     hub_addr, bus
+                        movs    port41_handler, #_port41_table
+                        jmp     #loop
+
 // ------------------------------------------------------------------------
 
 #include "i2c.inc"
@@ -403,6 +423,7 @@ cog_driver_addr         long    $6600
 cog_param_addr          long    $6E00
 
 hub_video_ram           long    $0000
+hub_video_ram_top       long    $0000 + (128 * V_RES)
 hub_palette             long    $7800
 hub_palette_top         long    $7810
 
