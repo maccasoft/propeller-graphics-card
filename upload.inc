@@ -3,6 +3,8 @@
 // PORT 42H Firmware Upload
 // ------------------------------------------------------------------------
 
+                        .equ    EEPROM_PAGE_SIZE, 128
+
 upload                  shr     bus, #8
                         and     bus, #$FF
                         cmp     bus, #$50 wz
@@ -25,22 +27,11 @@ _upload2                shr     bus, #8
 
 _upload3                shr     bus, #8
                         and     bus, #$FF
-                        mov     data, bus
 
-                        cmp     data, #$31 wz
-        if_nz           cmp     data, #$32 wz
-        if_z            movs    port42_handler, #_upload_cnt
+                        cmp     bus, #$31 wz
+        if_nz           cmp     bus, #$32 wz
         if_nz           movs    port42_handler, #upload
-                        jmp     #loop
-
-_upload_cnt             and     bus, data_bus_mask
-                        shr     bus, #8
-                        mov     ecnt, bus
-                        movs    port42_handler, #_upload_cnt_hi
-                        jmp     #loop
-
-_upload_cnt_hi          and     bus, data_bus_mask
-                        or      ecnt, bus
+        if_nz           jmp     #loop
 
                         or      OUTA, bus_wait
 
@@ -56,13 +47,15 @@ _l8                     cmp     b, a wz
 
                         mov     hub_addr, #0
                         mov     i2c_addr, #0
-                        mov     ccnt, #32
+                        mov     ccnt, #EEPROM_PAGE_SIZE
 
-                        cmp     data, #$31 wz
-        if_z            movs    port42_handler, #upload_ram
-        if_z            jmp     #loop
-                        cmp     data, #$32 wz
+                        cmp     bus, #$32 wz
+        if_z            mov     ecnt, eeprom_size
         if_z            movs    port42_handler, #upload_eeprom
+        if_z            jmp     #loop
+
+                        mov     ecnt, hub_ram_size
+                        movs    port42_handler, #upload_ram
                         jmp     #loop
 
 upload_ram
@@ -85,11 +78,11 @@ upload_eeprom
                         or      OUTA, bus_wait
 
                         mov     i2c_hub_addr, #0
-                        mov     ccnt, #32
+                        mov     ccnt, #EEPROM_PAGE_SIZE
                         call    #eeprom_write
 
                         mov     hub_addr, #0
-                        mov     ccnt, #32
+                        mov     ccnt, #EEPROM_PAGE_SIZE
                         andn    OUTA, bus_wait
 
                         cmp     ecnt, #0 wz
@@ -123,7 +116,7 @@ _l4w                    rdbyte  i2c_data, i2c_hub_addr
                         add     i2c_addr, #1
                         sub     ccnt, #1 wz
         if_z            jmp     #_l5w
-                        test    i2c_addr, #$3F wz
+                        test    i2c_addr, #EEPROM_PAGE_SIZE-1 wz
         if_nz           jmp     #_l4w
 
 _l5w                    call    #i2c_stop
@@ -137,3 +130,6 @@ _l5w                    call    #i2c_stop
         if_nz           jmp     #eeprom_write
 
 eeprom_write_ret        ret
+
+hub_ram_size            long    $8000
+eeprom_size             long    $10000

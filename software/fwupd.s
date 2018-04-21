@@ -51,14 +51,10 @@ start:
                 ld      a,32h           ; Write to EEPROM
                 out     (PORT),a
 
-                ld      a,00h           ; 32768 (8000h) bytes
-                out     (PORT),a
-                ld      a,80h
-                out     (PORT),a
-
-                ld      b,0             ; 256 x 128 bytes blocks
+                ld      bc,200h         ; 512 x 128 bytes blocks
 
 _l001:          push    bc
+
                 ld      c,BRRAND
                 ld      de,fcb
                 call    BDOS
@@ -81,11 +77,19 @@ _l002:          ld      a,(hl)
                 call    BDOS
 
                 pop     bc
-                djnz    _l001
+
+                dec     bc
+                ld      a,b
+                or      c
+                jp      nz,_l001
 
 exit:
                 ld      c,BCLOSE
                 ld      de,fcb
+                call    BDOS
+
+                ld      c,BPRINT
+                ld      de,msg2
                 call    BDOS
 
                 jp      WBOOT
@@ -94,6 +98,7 @@ fill:
                 pop     bc
 
 _l004:          push    bc              ; Fill remaining bytes with 0
+
                 ld      b,128
                 xor     a
 _l003:          out     (PORT),a
@@ -105,7 +110,12 @@ _l003:          out     (PORT),a
                 call    BDOS
 
                 pop     bc
-                djnz    _l004
+
+                dec     bc
+                ld      a,b
+                or      c
+                jp      nz,_l004
+
                 jp      exit
 
 err1:
@@ -116,6 +126,7 @@ err1:
                 jp      WBOOT
 
 msg1:           defb    "Error opening file", 13, 10, "$"
+msg2:           defb    13, 10, "Done", 13, 10, "$"
 
 fcb:            defb     0                       ; (dr) use default drive
                 defb     "FIRMWARE"              ; (f1-f8)
