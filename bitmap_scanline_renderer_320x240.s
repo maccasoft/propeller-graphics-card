@@ -58,7 +58,7 @@ loop
                         mov     video_ptr, loffs
                         shl     video_ptr, #7
 
-                        mov     ecnt, #16
+                        mov     ecnt, #32
 
                         movd    str0, #sbuf
                         movd    str1, #sbuf+1
@@ -66,8 +66,8 @@ loop
                         movd    str3, #sbuf+3
                         movd    str4, #sbuf+4
 
-_l1                     rdlong  pixels1, video_ptr
-                        add     video_ptr, #4
+_l1                     rdword  pixels1, video_ptr
+                        add     video_ptr, #2
 
                         mov     a, pixels1
                         and     a, #$07
@@ -102,7 +102,8 @@ _l1                     rdlong  pixels1, video_ptr
                         add     a, #palette
                         movs    _mv8, a
 
-                        shr     pixels1, #3
+                        rdword  pixels1, video_ptr
+                        add     video_ptr, #2
 
                         mov     a, pixels1
                         and     a, #$07
@@ -137,8 +138,8 @@ _l1                     rdlong  pixels1, video_ptr
                         add     a, #palette
                         movs    _mv11, a
 
-                        rdlong  pixels1, video_ptr
-                        add     video_ptr, #4
+                        rdword  pixels1, video_ptr
+                        add     video_ptr, #2
 
                         mov     a, pixels1
                         and     a, #$07
@@ -173,7 +174,8 @@ _l1                     rdlong  pixels1, video_ptr
                         add     a, #palette
                         movs    _mv14, a
 
-                        shr     pixels1, #3
+                        rdword  pixels1, video_ptr
+                        add     video_ptr, #2
 
                         mov     a, pixels1
                         and     a, #$07
@@ -262,7 +264,6 @@ _mv20                   or     colors1, 0-0
 
 str4                    mov     0-0, colors1
                         add     str4, inc_dest_5
-
 
                         djnz    ecnt, #_l1
 

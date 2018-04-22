@@ -336,6 +336,8 @@ set_pixel_param2
         if_c            add     ptr, #8
                         cmpsub  data1, #10 wc
         if_c            add     ptr, #4
+                        cmpsub  data1, #5 wc
+        if_c            add     ptr, #2
 
                         mov     b, data1
                         shl     data1, #1
@@ -343,7 +345,7 @@ set_pixel_param2
 
                         // data2 = pixel (0-7)
 
-                        rdlong  data, ptr
+                        rdword  data, ptr
 
                         mov     a, #7
                         shl     a, data1
@@ -353,7 +355,7 @@ set_pixel_param2
                         shl     data2, data1
                         or      data, data2
 
-                        wrlong  data, ptr
+                        wrword  data, ptr
 #elif BPP == 4
                         mov     a, data1
                         shr     a, #1
