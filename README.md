@@ -11,6 +11,7 @@ Add-on board and firmware designed for the [RC2014](http://rc2014.co.uk/) comput
  * Sprites with 8x8 up to 32x32 pixels
  * Full screen scroll
  * Overlays for score and indicators
+ * Bitmap graphics modes 320x240x3bpp, 256x192x4bpp and 256x224x4bpp
  * RGB PAL, NTSC and VGA output
 
 The board uses I/O ports **40H, 41H, 42H and 43H** for programming.
