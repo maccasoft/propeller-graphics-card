@@ -5,30 +5,21 @@
 
                         .equ    EEPROM_PAGE_SIZE, 128
 
-upload                  shr     bus, #8
-                        and     bus, #$FF
-                        cmp     bus, #$50 wz
+upload                  cmp     bus, #$50 wz
         if_z            movs    port42_handler, #_upload1
                         jmp     #loop
 
-_upload1                shr     bus, #8
-                        and     bus, #$FF
-                        cmp     bus, #$38 wz
+_upload1                cmp     bus, #$38 wz
         if_z            movs    port42_handler, #_upload2
         if_nz           movs    port42_handler, #upload
                         jmp     #loop
 
-_upload2                shr     bus, #8
-                        and     bus, #$FF
-                        cmp     bus, #$58 wz
+_upload2                cmp     bus, #$58 wz
         if_z            movs    port42_handler, #_upload3
         if_nz           movs    port42_handler, #upload
                         jmp     #loop
 
-_upload3                shr     bus, #8
-                        and     bus, #$FF
-
-                        cmp     bus, #$31 wz
+_upload3                cmp     bus, #$31 wz
         if_nz           cmp     bus, #$32 wz
         if_nz           movs    port42_handler, #upload
         if_nz           jmp     #loop
@@ -59,7 +50,6 @@ _l8                     cmp     b, a wz
                         jmp     #loop
 
 upload_ram
-                        shr     bus, #8
                         wrbyte  bus, hub_addr
                         add     hub_addr, #1
                         djnz    ecnt, #loop
@@ -69,7 +59,6 @@ upload_ram
                         coginit a
 
 upload_eeprom
-                        shr     bus, #8
                         wrbyte  bus, hub_addr
                         add     hub_addr, #1
                         sub     ecnt, #1 wz

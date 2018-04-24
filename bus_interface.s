@@ -52,6 +52,8 @@ port41_handler          jmp     0-0
 
                         .org    PORT_42             // 42H / 66
 
+                        shr     bus, #8
+                        and     bus, #$FF
 port42_handler          jmp     #upload
 
                         .org    PORT_43             // 43H / 67
@@ -163,7 +165,7 @@ write_ram
                         jmp     #loop
 
 // ------------------------------------------------------------------------
-// PORT 41H Commands
+// PORT 41H Handlers
 // ------------------------------------------------------------------------
 
 _port41_table           long    write_byte
@@ -308,8 +310,7 @@ _drv0                   mov     i2c_addr, 0-0
                         call    #eeprom_read
 
                         mov     ptr, cog_driver_addr
-                        add     ptr, #4
-                        add     ptr, #2
+                        add     ptr, #4+2
                         rdword  vsync_line, ptr
 
                         mov     ptr, cog_param_addr
@@ -319,8 +320,8 @@ _drv0                   mov     i2c_addr, 0-0
                         add     ptr, #1
                         wrbyte  data2, ptr
 
-                        neg     b, #1
-                        wrlong  b, hub_fi
+                        neg     a, #1
+                        wrlong  a, hub_fi
 
                         mov     a, cog_param_addr
                         shl     a, #14
@@ -329,7 +330,7 @@ _drv0                   mov     i2c_addr, 0-0
                         or      a, #%1000
                         coginit a
 
-                        rdlong  b, hub_fi wz
+                        rdlong  a, hub_fi wz
         if_nz           jmp     #$-1
 
                         rdword  hub_bitmap_ram, hub_tiles_ptr
@@ -407,7 +408,6 @@ video_mode_loaders
 
 a                       res     1
 b                       res     1
-c                       res     1
 ptr                     res     1
 data                    res     1
 data1                   res     1

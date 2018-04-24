@@ -45,6 +45,8 @@ port41_handler          jmp     0-0
 
                         .org    PORT_42             // 42H / 66
 
+                        shr     bus, #8
+                        and     bus, #$FF
 port42_handler          jmp     #upload
 
                         .org    PORT_43             // 43H / 67
@@ -147,7 +149,7 @@ write_video_ram
                         jmp     #loop
 
 // ------------------------------------------------------------------------
-// PORT 41H Commands
+// PORT 41H Handlers
 // ------------------------------------------------------------------------
 
 _port41_table           long    write_byte
@@ -156,9 +158,9 @@ _port41_table           long    write_byte
                         long    set_mode_param      // +3
                         long    set_mode_param1     // +4
                         long    set_mode_param2     // +5
-                        long    set_pixel_param     // +6
-                        long    set_pixel_param1    // +7
-                        long    set_pixel_param2    // +8
+                        long    set_pixel_y         // +6
+                        long    set_pixel_x         // +7
+                        long    set_pixel_color     // +8
                         long    add_palette_offset  // +9
 
 write_byte
@@ -273,8 +275,8 @@ _drv1                   mov     i2c_addr, 0-0
                         mov     ccnt, cog_driver_size
                         call    #eeprom_read
 
-                        neg     b, #1
-                        wrlong  b, hub_fi
+                        neg     a, #1
+                        wrlong  a, hub_fi
 
                         mov     a, hub_fi
                         shl     a, #14
@@ -283,7 +285,7 @@ _drv1                   mov     i2c_addr, 0-0
                         or      a, #%1000
                         coginit a
 
-                        rdlong  b, hub_fi wz
+                        rdlong  a, hub_fi wz
         if_nz           jmp     #$-1
 
                         // defaults to raw bitmap write
@@ -295,88 +297,81 @@ _drv1                   mov     i2c_addr, 0-0
 
                         jmp     #clear_screen
 
-set_pixel_param
-                        shr     bus, #8
-                        mov     data, bus
-                        and     data, #$FF
+set_pixel_y
+                        mov     hub_addr, bus       // first byte is y, pre-calculate initial hub address
+                        and     hub_addr, data_bus_mask
+                        shr     hub_addr, #1
                         add     port41_handler, #1
                         jmp     #loop
 
-set_pixel_param1
-                        shr     bus, #8
+set_pixel_x
+                        shr     bus, #8             // second byte is x
                         mov     data1, bus
                         and     data1, #$FF
                         add     port41_handler, #1
                         jmp     #loop
 
-set_pixel_param2
-                        shr     bus, #8
-                        mov     data2, bus
-                        and     data2, #$FF
-                        movs    port41_handler, #_port41_table+6
-
-                        // data  = y
-
-                        mov     ptr, data
-                        shl     ptr, #7
+set_pixel_color
+                        shr     bus, #8             // third byte is pixel value (+ 9th bit of x position)
+                        sub     port41_handler, #2
 
                         // data1 = x
 
 #if BPP == 3
-                        test    data2, #$80 wz      // add 8th bit from data2
+                        test    bus, #$80 wz        // add 9th bit from pixel byte
         if_nz           add     data1, #256
 
-                        cmpsub  data1, #160 wc      // fast division
-        if_c            add     ptr, #64
+                        cmpsub  data1, #160 wc      // adjust pointer location
+        if_c            add     hub_addr, #64
                         cmpsub  data1, #80 wc
-        if_c            add     ptr, #32
+        if_c            add     hub_addr, #32
                         cmpsub  data1, #40 wc
-        if_c            add     ptr, #16
+        if_c            add     hub_addr, #16
                         cmpsub  data1, #20 wc
-        if_c            add     ptr, #8
+        if_c            add     hub_addr, #8
                         cmpsub  data1, #10 wc
-        if_c            add     ptr, #4
+        if_c            add     hub_addr, #4
                         cmpsub  data1, #5 wc
-        if_c            add     ptr, #2
+        if_c            add     hub_addr, #2
 
-                        mov     b, data1
+                        mov     a, data1            // data1 now is 320 mod 5, calculate pixel bit shift
                         shl     data1, #1
-                        add     data1, b
+                        add     data1, a
 
-                        // data2 = pixel (0-7)
+                        // bus = pixel (0-7)
 
-                        rdword  data, ptr
+                        rdword  data, hub_addr
 
                         mov     a, #7
                         shl     a, data1
                         andn    data, a
 
-                        and     data2, #7
-                        shl     data2, data1
-                        or      data, data2
+                        and     bus, #7
+                        shl     bus, data1
+                        or      data, bus
 
-                        wrword  data, ptr
+                        wrword  data, hub_addr
 #elif BPP == 4
                         mov     a, data1
                         shr     a, #1
-                        add     ptr, a
+                        add     hub_addr, a
 
                         and     data1, #$01
                         shl     data1, #2
 
-                        // data2 = pixel (0-15)
+                        // bus = pixel (0-15)
 
-                        rdbyte  data, ptr
+                        rdbyte  data, hub_addr
 
                         mov     a, #$0F
                         shl     a, data1
                         andn    data, a
 
-                        and     data2, #$0F
-                        shl     data2, data1
-                        or      data, data2
+                        and     bus, #$0F
+                        shl     bus, data1
+                        or      data, bus
 
-                        wrbyte  data, ptr
+                        wrbyte  data, hub_addr
 #endif
 
                         jmp     #loop
@@ -490,7 +485,6 @@ video_mode_loaders
 
 a                       res     1
 b                       res     1
-c                       res     1
 ptr                     res     1
 data                    res     1
 data1                   res     1
