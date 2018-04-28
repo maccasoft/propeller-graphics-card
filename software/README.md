@@ -11,6 +11,13 @@ Utilities and demo programs designed to run from CP/M.
  * **vscroll.com**  
    Vertical scroll with music demo.  
    ![screen](vscroll.png)  
+   
+ * **bars.com**  
+   Colored bars.  
+ * **sinwave.com**  
+   Simple 3D math function drawing using the Z-buffer algorithm (from z88dk).  
+ * **coswave.com**  
+   Simple 3D math function drawing using the Z-buffer algorithm (from z88dk).  
 
 All programs can be compiled with [z88dk](https://www.z88dk.org) using the provided Makefile or individually using the instructions in the source files.
 
