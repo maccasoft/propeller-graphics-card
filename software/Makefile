@@ -4,7 +4,7 @@ ASM := z80asm
 
 ASMFLAGS := --cpu=z80 -r0100h
 
-all: fwupd.com hscroll.com vscroll.com bars.com
+all: fwupd.com hscroll.com vscroll.com bars.com sinwave.com coswave.com
 
 
 fwupd.com: fwupd.s Makefile
@@ -18,6 +18,12 @@ vscroll.com: vscroll.s music.s Makefile
 
 bars.com: bars.s Makefile
 	$(ASM) $(ASMFLAGS) -b --output=$@ bars.s
+
+sinwave.com: sinwave.c Makefile
+	$(CC) +cpm -lm -o$@ sinwave.c
+
+coswave.com: coswave.c Makefile
+	$(CC) +cpm -lm -o$@ sinwave.c
 
 
 %.o: %.s
