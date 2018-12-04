@@ -1,0 +1,27 @@
+
+TASM = C:\TASM31\TASM
+TASMOPT = -80
+
+all: ascii.hex mandel.hex nyan.hex sprite.hex
+
+ascii.hex: ascii.asm tms.asm tmsfont.asm
+	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
+
+mandel.hex: mandel.asm tms.asm
+	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
+
+nyan.hex: nyan.asm nyan.inc tms.asm
+	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
+
+sprite.hex: sprite.asm tms.asm
+	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
+
+clean:
+	del ascii.hex
+	del ascii.lst
+	del mandel.hex
+	del mandel.lst
+	del nyan.hex
+	del nyan.lst
+	del sprite.hex
+	del sprite.lst
