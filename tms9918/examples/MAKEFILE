@@ -2,7 +2,7 @@
 TASM = C:\TASM31\TASM
 TASMOPT = -80
 
-all: ascii.hex mandel.hex nyan.hex sprite.hex
+all: ascii.hex mandel.hex nyan.hex sprite.hex plasma.hex
 
 ascii.hex: ascii.asm tms.asm tmsfont.asm
 	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
@@ -16,6 +16,9 @@ nyan.hex: nyan.asm nyan.inc tms.asm
 sprite.hex: sprite.asm tms.asm
 	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
 
+plasma.hex: plasma.asm tms.asm
+	$(TASM) $(TASMOPT) -h $*.asm $*.hex $*.lst
+
 clean:
 	del ascii.hex
 	del ascii.lst
@@ -25,3 +28,5 @@ clean:
 	del nyan.lst
 	del sprite.hex
 	del sprite.lst
+	del plasma.hex
+	del plasma.lst

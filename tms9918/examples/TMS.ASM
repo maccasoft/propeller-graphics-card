@@ -332,6 +332,23 @@ NAMELOOP
                 CALL  TMSCONFIG
                 RET
 
+TMSGRAPH1REG
+                .DB   00000000B         ; graphics 1 mode, no external video
+                .DB   11000000B         ; 16K, enable display, disable interrupt
+                .DB   05H               ; name table at $1400
+                .DB   80H               ; color table at $2000
+                .DB   01H               ; pattern table at $800
+                .DB   20H               ; sprite attribute table at $1000
+                .DB   00H               ; sprite pattern table at $0
+                .DB   01H               ; black background
+
+; initialize TMS for graphics 1 mode
+TMSGRAPH1
+                CALL  TMSRESET
+                LD    HL, TMSGRAPH1REG
+                CALL  TMSCONFIG
+                RET
+
 TMSTEXTREG
                 .DB   00000000B         ; text mode, no external video
                 .DB   11010000B         ; 16K, Enable Display, Disable Interrupt
