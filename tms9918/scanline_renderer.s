@@ -131,8 +131,6 @@ text_mode
 
                         mov     ecnt, #20
                         movd    _dst5, #sbuf+2
-                        movd    _dst6, #sbuf+2+1
-                        movd    _dst7, #sbuf+2+2
 
                         mov     a, register7
                         and     a, #$0F
@@ -153,7 +151,7 @@ rloop40                 rdbyte  tile_ptr, register2         // read tile number 
                         shl     tile_ptr, #3                // 8 bytes per tile
                         add     tile_ptr, register4
                         rdbyte  tile, tile_ptr              // pixels, 1 bit per pixel, from msb
-
+                        and     tile, #$FC
                         add     register2, #1
                         rdbyte  tile_ptr, register2         // read tile number to display
                         shl     tile_ptr, #3                // 8 bytes per tile
@@ -162,33 +160,19 @@ rloop40                 rdbyte  tile_ptr, register2         // read tile number 
 
                         shl     tile, #6
                         or      tile, data
-                        shr     tile, #2
+                        shl     tile, #18
 
-                        mov     pixels1, #0
-                        mov     pixels2, #0
-                        mov     pixels3, #0
-                        mov     ccnt, #4
-                        test    tile, #%1_0000_0000 wz
-        if_z            or      pixels1, colors0
-        if_nz           or      pixels1, colors1
-                        test    tile, #%0_0001_0000 wz
-        if_z            or      pixels2, colors0
-        if_nz           or      pixels2, colors1
-                        test    tile, #%0_0000_0001 wz
-        if_z            or      pixels3, colors0
-        if_nz           or      pixels3, colors1
-                        shr     tile, #1
-                        ror     pixels1, #8
-                        ror     pixels2, #8
-                        ror     pixels3, #8
-                        djnz    ccnt, #$-13
-
+                        mov     ccnt, #3
+_l2a                    mov     pixels1, #0
+                        mov     acnt, #4
+_l2b                    shl     tile, #1 wc
+                        rol     pixels1, #8
+        if_nc           or      pixels1, colors0
+        if_c            or      pixels1, colors1
+                        djnz    acnt, #_l2b
 _dst5                   mov     0-0, pixels1
-                        add     _dst5, inc_dest_3
-_dst6                   mov     0-0, pixels2
-                        add     _dst6, inc_dest_3
-_dst7                   mov     0-0, pixels3
-                        add     _dst7, inc_dest_3
+                        add     _dst5, inc_dest
+                        djnz    ccnt, #_l2a
 
                         add     register2, #1
                         djnz    ecnt, #rloop40
@@ -247,7 +231,6 @@ _dst11                  mov     0-0, 1-1
 graphics_mode
                         mov     ecnt, #32
                         movd    _dst8, #sbuf
-                        movd    _dst9, #sbuf+1
 
 rloop32                 rdbyte  tile_ptr, register2         // read tile number to display
 
@@ -280,25 +263,19 @@ _c1g                    mov     colors1, 0-0
                         shl     tile_ptr, #3                // 8 bytes per tile
                         add     tile_ptr, register4
                         rdbyte  tile, tile_ptr              // pixels, 1 bit per pixel, from msb
+                        shl     tile, #24
 
-                        mov     pixels1, #0
-                        mov     pixels2, #0
-                        mov     ccnt, #4
-                        test    tile, #%0001_0000 wz
-        if_z            or      pixels1, colors0
-        if_nz           or      pixels1, colors1
-                        test    tile, #%0000_0001 wz
-        if_z            or      pixels2, colors0
-        if_nz           or      pixels2, colors1
-                        shr     tile, #1
-                        ror     pixels1, #8
-                        ror     pixels2, #8
-                        djnz    ccnt, #$-9
-
+                        mov     ccnt, #2
+_l4a                    mov     pixels1, #0
+                        mov     acnt, #4
+_l4b                    shl     tile, #1 wc
+                        rol     pixels1, #8
+        if_nc           or      pixels1, colors0
+        if_c            or      pixels1, colors1
+                        djnz    acnt, #_l4b
 _dst8                   mov     0-0, pixels1
-                        add     _dst8, inc_dest_2
-_dst9                   mov     0-0, pixels2
-                        add     _dst9, inc_dest_2
+                        add     _dst8, inc_dest
+                        djnz    ccnt, #_l4a
 
                         add     register2, #1
                         djnz    ecnt, #rloop32
@@ -516,6 +493,7 @@ ptr                     res     1
 
 ecnt                    res     1
 scnt                    res     1
+acnt                    res     1
 ccnt                    res     1
 pcnt                    res     1
 lcnt                    res     1
