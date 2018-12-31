@@ -181,16 +181,17 @@ vdp_write_reg
 
 vdp_read
                         rdbyte  bus, hub_status_register
-                        mov     a, bus
-                        andn    a, #$80
-                        wrbyte  a, hub_status_register
-
                         shl     bus, #8
                         or      DIRA, data_bus_mask
                         mov     OUTA, bus
 
                         waitpne bus_trigger, bus_mask
                         andn    DIRA, data_bus_mask
+
+                        shr     bus, #8
+                        test    bus, #$80 wz
+        if_nz           andn    bus, #$80
+        if_nz           wrbyte  bus, hub_status_register
 
                         jmp     #loop
 
