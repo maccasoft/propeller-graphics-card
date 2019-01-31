@@ -16,7 +16,7 @@ MODEL = lmm
 DEPDIR = .deps
 PORT ?= /dev/ttyUSB0
 
-DEFS ?= -DCOGS=6 -DMAX_SPRITES=32
+DEFS = -DCOGS=6 -DMAX_SPRITES=32
 
 CFLAGS = -Os -Wall -m32bit-doubles -fdata-sections -ffunction-sections $(DEFS)
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -std=c++0x

@@ -14,9 +14,9 @@ SPINC = $(TOOLCHAIN_HOME)openspin
 NAME = firmware
 MODEL = lmm
 DEPDIR = .deps
-PORT = /dev/ttyUSB0
+PORT ?= /dev/ttyUSB0
 
-DEFS ?= -DCOGS=6
+DEFS = -DCOGS=6
 
 CFLAGS = -Os -Wall -m32bit-doubles -fdata-sections -ffunction-sections $(DEFS)
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti -std=c++0x
