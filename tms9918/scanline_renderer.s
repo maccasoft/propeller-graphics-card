@@ -294,6 +294,9 @@ sprites
 
 _sprite_loop            rdlong  tile, register5
 
+                        test    tile, TMSSPRCOLOR wz        // check sprite color
+        if_z            jmp     #_next                      // skip if transparent
+
                         mov     y, tile
                         shl     y, #24
                         sar     y, #24                      // sign-extend y
@@ -453,7 +456,9 @@ i2s7                    long    2 << 23 | 7
 
 vdp_8k_mask             long    $1FFF
 neg_clip                long    -32
+
 TMSEARLYCLK             long    %10000000_00000000_00000000_00000000
+TMSSPRCOLOR             long    %00001111_00000000_00000000_00000000
 
 register0               long    $00
 register1               long    $00
