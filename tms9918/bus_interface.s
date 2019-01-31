@@ -39,24 +39,24 @@ start                   mov     OUTA, bus_wait
 // ------------------------------------------------------------------------
                         .org    PORT_40             // 40H / 64
 
-                        test    bus_write_bit, INA wz
-        if_nz           jmp     #ram_read
-                        mov     bus, INA
-                        andn    OUTA, bus_wait      // release CPU
+                        test    bus, #BUS_RD wz
+        if_z            jmp     #ram_read
+                        andn    DIRA, data_bus_mask
                         jmp     #ram_write
 
 // ------------------------------------------------------------------------
                         .org    PORT_41             // 41H / 65
 
-                        test    bus_write_bit, INA wz
-        if_nz           jmp     #vdp_read
-                        mov     bus, INA
-                        andn    OUTA, bus_wait      // release CPU
+                        test    bus, #BUS_RD wz
+        if_z            jmp     #vdp_read
+                        andn    DIRA, data_bus_mask
 port41_handler          jmp     0-0
 
 // ------------------------------------------------------------------------
                         .org    PORT_42             // 42H / 66
 
+                        test    bus, #BUS_WR wz
+        if_nz           jmp     #loop
                         shr     bus, #8
                         and     bus, #$FF
 port42_handler          jmp     #upload
@@ -65,7 +65,8 @@ port42_handler          jmp     #upload
                         .org    PORT_43             // 43H / 67
 
 port43_handler
-                        or      OUTA, bus_wait
+                        test    bus, #BUS_WR wz
+        if_nz           jmp     #loop
 
                         rdlong  a, hub_fi
                         cmp     a, vsync_line wz
@@ -140,9 +141,12 @@ _l7                     wrlong  a, ptr
 loop
                         mov     OUTA, bus_trigger
                         waitpne OUTA, bus_mask
-                        waitpeq OUTA, bus_mask wr
+                        waitpeq OUTA, bus_mask wr   // wr asserts wait line immediately
+                        mov     bus, INA
+                        test    bus, #1 wz          // check if IOREQ still asserted
+        if_nz           jmp     #loop
 
-                        mov     ptr, INA
+                        mov     ptr, bus
                         and     ptr, #PORT_MASK
                         jmp     ptr
 
@@ -228,11 +232,12 @@ ram_read
 
 // ------------------------------------------------------------------------
 
-bus_trigger             long    %00000000_00000000_00000000_100_00_100  // BUS_M1|BUS_A6               // pins state
-bus_mask                long    %00001000_00000000_00000000_100_00_111  // BUS_PINS ^ (BUS_A0|BUS_A1|BUS_RD|BUS_WR)  // monitored pins
+bus_trigger             long    BUS_M1|BUS_A6                               // pins state
+bus_mask                long    BUS_M1|BUS_A6|BUS_A2_A7|BUS_IORQ|BUS_WAIT   // monitored pins
 
-bus_wait                long    1 << wait_pin
+bus_wait                long    BUS_WAIT
 bus_write_bit           long    BUS_WR
+bus_read_bit            long    BUS_RD
 
 data_bus_mask           long    %00000000_00000000_11111111_00000000
 data_bus_reg_bit        long    %00000000_00000000_10000000_00000000
